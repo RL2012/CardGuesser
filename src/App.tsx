@@ -1,16 +1,15 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAppDispatch, useAppSelector } from './hooks'
 import { fetchCards } from './store/cardsSlice'
-import { startRound, correctGuess, replaceCard, skipCard, tickSecond, addWrongGuess } from './store/gameSlice'
-import { getRandomCard, randomCrop } from './utils'
-import CardDisplay from './components/CardDisplay'
-import CardSearch from './components/CardSearch'
-import PreviousRounds from './components/PreviousRounds'
-import type { Card } from './types'
+import CardGuesser from './components/card-guesser/CardGuesser'
+import HigherOrLower from './components/higher-or-lower/HigherOrLower'
 import './App.css'
+
+type GameMode = 'card-guesser' | 'higher-or-lower'
 
 export default function App() {
   const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark')
+  const [activeGame, setActiveGame] = useState<GameMode>('card-guesser')
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light')
@@ -18,81 +17,11 @@ export default function App() {
   }, [isDark])
 
   const dispatch = useAppDispatch()
-  const { status, cards } = useAppSelector((s) => s.cards)
-  const { currentCard, isActive, cardTimeLeft, previousRounds, wrongGuesses } = useAppSelector(
-    (s) => s.game,
-  )
-
-  // Pre-selected next card. Validates the image actually loads before storing,
-  // retrying on error so the ref always points to a card with a working image.
-  const nextCardRef = useRef<Card | null>(null)
-
-  useEffect(() => {
-    if (cards.length === 0) return
-    let cancelled = false
-    let attempts = 0
-
-    const tryLoad = (exclude: Card | null) => {
-      if (cancelled || attempts >= 10) return
-      attempts++
-      const card = getRandomCard(cards, exclude ?? undefined)
-      const img = new Image()
-      img.onload = () => { if (!cancelled) nextCardRef.current = card }
-      img.onerror = () => tryLoad(exclude)
-      img.src = `https://images.ygoprodeck.com/images/cards_cropped/${card.id}.jpg`
-    }
-
-    tryLoad(currentCard)
-    return () => { cancelled = true }
-  }, [currentCard, cards])
-
-  const takeNextCard = (exclude: Card | null): Card => {
-    const pre = nextCardRef.current
-    nextCardRef.current = null
-    if (pre && pre.id !== exclude?.id) return pre
-    return getRandomCard(cards, exclude ?? undefined)
-  }
+  const { status } = useAppSelector((s) => s.cards)
 
   useEffect(() => {
     if (status === 'idle') dispatch(fetchCards())
   }, [dispatch, status])
-
-  useEffect(() => {
-    if (status === 'succeeded' && cards.length > 0 && !currentCard) {
-      dispatch(startRound({ card: takeNextCard(null), ...randomCrop() }))
-    }
-  }, [status, cards, currentCard, dispatch])
-
-  useEffect(() => {
-    if (!isActive) return
-    const id = setInterval(() => dispatch(tickSecond()), 1000)
-    return () => clearInterval(id)
-  }, [isActive, dispatch])
-
-  useEffect(() => {
-    if (cardTimeLeft === 0 && isActive && cards.length > 0) {
-      dispatch(skipCard({ nextCard: takeNextCard(currentCard), ...randomCrop() }))
-    }
-  }, [cardTimeLeft, isActive, cards, currentCard, dispatch])
-
-  const handleGuess = (name: string) => {
-    if (!currentCard || !isActive) return
-    if (name.toLowerCase() === currentCard.name.toLowerCase()) {
-      dispatch(correctGuess({ nextCard: takeNextCard(currentCard), ...randomCrop() }))
-    } else {
-      dispatch(addWrongGuess(name))
-    }
-  }
-
-  const handleSkip = () => {
-    if (!cards.length) return
-    dispatch(skipCard({ nextCard: takeNextCard(currentCard), ...randomCrop() }))
-  }
-
-  const handleReplace = () => {
-    if (!cards.length) return
-    dispatch(replaceCard({ card: takeNextCard(currentCard), ...randomCrop() }))
-  }
 
   return (
     <div className="app">
@@ -101,6 +30,20 @@ export default function App() {
           {isDark ? 'Light mode' : 'Dark mode'}
         </button>
         <h1>Card Guesser</h1>
+        <nav className="game-tabs">
+          <button
+            className={`game-tab${activeGame === 'card-guesser' ? ' game-tab--active' : ''}`}
+            onClick={() => setActiveGame('card-guesser')}
+          >
+            Card Guesser
+          </button>
+          <button
+            className={`game-tab${activeGame === 'higher-or-lower' ? ' game-tab--active' : ''}`}
+            onClick={() => setActiveGame('higher-or-lower')}
+          >
+            Higher or Lower
+          </button>
+        </nav>
       </header>
 
       {status === 'loading' && <p className="status-message">Loading cards…</p>}
@@ -109,26 +52,10 @@ export default function App() {
       )}
 
       {status === 'succeeded' && (
-        <main className="app-main">
-          <CardDisplay onSkip={handleSkip} onReplace={handleReplace} />
-          <div className="game-panel">
-            <CardSearch
-              cardNames={cards.map((c) => c.name)}
-              onGuess={handleGuess}
-              disabled={!isActive}
-            />
-            {wrongGuesses.length > 0 && (
-              <ul className="wrong-guesses">
-                {wrongGuesses.map((name) => (
-                  <li key={name} className="wrong-guess-item">
-                    {name}
-                  </li>
-                ))}
-              </ul>
-            )}
-            <PreviousRounds rounds={previousRounds} />
-          </div>
-        </main>
+        <>
+          {activeGame === 'card-guesser' && <CardGuesser />}
+          {activeGame === 'higher-or-lower' && <HigherOrLower />}
+        </>
       )}
     </div>
   )

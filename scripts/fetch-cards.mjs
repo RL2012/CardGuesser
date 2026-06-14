@@ -14,5 +14,20 @@ if (!res.ok) {
 const { data } = await res.json()
 console.log(`Got ${data.length} cards.`)
 
-writeFileSync(CARDS_TXT, data.map((c) => `${c.id}|${c.name}`).join('\n'), 'utf-8')
+// Format: id|name|frameType|attribute|atk|def|level|race
+// Empty string for fields not applicable to a card type (e.g. Spells have no attribute/atk/def)
+const lines = data.map((c) =>
+  [
+    c.id,
+    c.name,
+    c.frameType ?? '',
+    c.attribute ?? '',
+    c.atk ?? '',
+    c.def ?? '',
+    c.level ?? c.linkval ?? '',
+    c.race ?? '',
+  ].join('|'),
+)
+
+writeFileSync(CARDS_TXT, lines.join('\n'), 'utf-8')
 console.log('Saved public/cards.txt')

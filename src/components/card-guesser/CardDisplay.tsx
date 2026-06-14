@@ -1,6 +1,6 @@
-import { useAppDispatch, useAppSelector } from '../hooks'
-import { zoomOut } from '../store/gameSlice'
-import { formatTime } from '../utils'
+import { useAppDispatch, useAppSelector } from '../../hooks'
+import { zoomOut } from '../../store/gameSlice'
+import { formatTime } from '../../utils'
 
 const ZOOM_LEVELS = [5, 4, 3, 2, 1] as const
 

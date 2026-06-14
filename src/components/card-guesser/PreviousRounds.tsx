@@ -1,4 +1,4 @@
-import type { PreviousRound } from '../store/gameSlice'
+import type { PreviousRound } from '../../store/gameSlice'
 
 interface Props {
   rounds: PreviousRound[]
