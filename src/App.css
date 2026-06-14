@@ -305,3 +305,63 @@
 .round-info__result--wrong {
   color: var(--text-muted);
 }
+
+/* ── Mobile (≤ 600px) ── */
+@media (max-width: 600px) {
+  .app {
+    height: auto;
+    overflow: visible;
+  }
+
+  .app-header {
+    padding: 0.625rem 1rem 0.625rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .app-header h1 {
+    font-size: 1.25rem;
+    margin: 0;
+  }
+
+  .theme-toggle {
+    position: static;
+    transform: none;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .app-main {
+    flex-direction: column;
+    gap: 1.25rem;
+    padding: 1rem;
+    overflow: visible;
+    height: auto;
+  }
+
+  .card-display {
+    flex: none;
+    width: 100%;
+  }
+
+  .card-image-area {
+    width: 100%;
+    aspect-ratio: 1;
+  }
+
+  .game-panel {
+    overflow-y: visible;
+    min-height: 0;
+    gap: 1.25rem;
+  }
+
+  .round-thumbnail {
+    width: 80px;
+    height: 80px;
+  }
+
+  .round-info__name {
+    font-size: 0.875rem;
+  }
+}
