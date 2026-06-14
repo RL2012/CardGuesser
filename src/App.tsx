@@ -3,9 +3,10 @@ import { useAppDispatch, useAppSelector } from './hooks'
 import { fetchCards } from './store/cardsSlice'
 import CardGuesser from './components/card-guesser/CardGuesser'
 import HigherOrLower from './components/higher-or-lower/HigherOrLower'
+import PvpLobby from './components/pvp-lobby/PvpLobby'
 import './App.css'
 
-type GameMode = 'card-guesser' | 'higher-or-lower'
+type GameMode = 'card-guesser' | 'higher-or-lower' | 'pvp'
 
 export default function App() {
   const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark')
@@ -43,6 +44,12 @@ export default function App() {
           >
             Higher or Lower
           </button>
+          <button
+            className={`game-tab${activeGame === 'pvp' ? ' game-tab--active' : ''}`}
+            onClick={() => setActiveGame('pvp')}
+          >
+            PvP
+          </button>
         </nav>
       </header>
 
@@ -55,6 +62,7 @@ export default function App() {
         <>
           {activeGame === 'card-guesser' && <CardGuesser />}
           {activeGame === 'higher-or-lower' && <HigherOrLower />}
+          {activeGame === 'pvp' && <PvpLobby />}
         </>
       )}
     </div>
