@@ -5,11 +5,27 @@ import type { DataConnection } from 'peerjs'
 const MAX_PLAYERS = 4
 
 const ICE_SERVERS = [
-  { urls: 'stun:stun.l.google.com:19302' },
-  { urls: 'stun:openrelay.metered.ca:80' },
-  { urls: 'turn:openrelay.metered.ca:80',               username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turn:openrelay.metered.ca:443',              username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turn:openrelay.metered.ca:443?transport=tcp',username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'stun:stun.relay.metered.ca:80' },
+  {
+    urls: 'turn:global.relay.metered.ca:80',
+    username: '990207c305e0623bfa241d3c',
+    credential: 'FaaoXWv8/duyAdvu',
+  },
+  {
+    urls: 'turn:global.relay.metered.ca:80?transport=tcp',
+    username: '990207c305e0623bfa241d3c',
+    credential: 'FaaoXWv8/duyAdvu',
+  },
+  {
+    urls: 'turn:global.relay.metered.ca:443',
+    username: '990207c305e0623bfa241d3c',
+    credential: 'FaaoXWv8/duyAdvu',
+  },
+  {
+    urls: 'turn:global.relay.metered.ca:443?transport=tcp',
+    username: '990207c305e0623bfa241d3c',
+    credential: 'FaaoXWv8/duyAdvu',
+  },
 ]
 
 interface PlayerInfo {
@@ -19,7 +35,7 @@ interface PlayerInfo {
 
 interface ChatMessage {
   id: number
-  name: string  // empty = system message
+  name: string // empty = system message
   text: string
   self: boolean
 }
@@ -58,29 +74,33 @@ export default function PvpLobby() {
   const myPeerIdRef = useRef('')
   const isHostRef = useRef(false)
   const clientConnsRef = useRef<Map<string, DataConnection>>(new Map()) // host only
-  const hostConnRef = useRef<DataConnection | null>(null)               // non-host only
+  const hostConnRef = useRef<DataConnection | null>(null) // non-host only
   const playersRef = useRef<PlayerInfo[]>([])
   const chatEndRef = useRef<HTMLDivElement | null>(null)
 
-  useEffect(() => { return () => { peerRef.current?.destroy() } }, [])
+  useEffect(() => {
+    return () => {
+      peerRef.current?.destroy()
+    }
+  }, [])
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chatMessages])
 
   function addPlayer(info: PlayerInfo) {
-    if (playersRef.current.some(p => p.peerId === info.peerId)) return
+    if (playersRef.current.some((p) => p.peerId === info.peerId)) return
     playersRef.current = [...playersRef.current, info]
     setPlayers([...playersRef.current])
   }
 
   function removePlayer(peerId: string) {
-    playersRef.current = playersRef.current.filter(p => p.peerId !== peerId)
+    playersRef.current = playersRef.current.filter((p) => p.peerId !== peerId)
     setPlayers([...playersRef.current])
   }
 
   function addChat(msg: Omit<ChatMessage, 'id'>) {
-    setChatMessages(prev => [...prev, { ...msg, id: chatIdSeq++ }])
+    setChatMessages((prev) => [...prev, { ...msg, id: chatIdSeq++ }])
   }
 
   // Host: relay a message to all clients, optionally skipping one
@@ -99,7 +119,11 @@ export default function PvpLobby() {
 
       if (msg.type === 'hello') {
         // Send new player the current roster before adding them
-        conn.send({ type: 'player-list', players: playersRef.current } satisfies ToClientMsg)
+        const hostInfo: PlayerInfo = { peerId: myPeerIdRef.current, name: myNameRef.current }
+        conn.send({
+          type: 'player-list',
+          players: [hostInfo, ...playersRef.current],
+        } satisfies ToClientMsg)
         const player: PlayerInfo = { peerId: msg.peerId, name: msg.name }
         addPlayer(player)
         broadcast({ type: 'player-joined', player } satisfies ToClientMsg, conn.peer)
@@ -114,11 +138,15 @@ export default function PvpLobby() {
     })
 
     conn.on('close', () => {
-      const leaving = playersRef.current.find(p => p.peerId === conn.peer)
+      const leaving = playersRef.current.find((p) => p.peerId === conn.peer)
       clientConnsRef.current.delete(conn.peer)
       removePlayer(conn.peer)
       if (leaving) {
-        broadcast({ type: 'player-left', peerId: conn.peer, name: leaving.name } satisfies ToClientMsg)
+        broadcast({
+          type: 'player-left',
+          peerId: conn.peer,
+          name: leaving.name,
+        } satisfies ToClientMsg)
         addChat({ name: '', text: `${leaving.name} left the room.`, self: false })
       }
     })
@@ -131,7 +159,11 @@ export default function PvpLobby() {
     hostConnRef.current = conn
 
     conn.on('open', () => {
-      conn.send({ type: 'hello', name: myNameRef.current, peerId: myPeerIdRef.current } satisfies ToHostMsg)
+      conn.send({
+        type: 'hello',
+        name: myNameRef.current,
+        peerId: myPeerIdRef.current,
+      } satisfies ToHostMsg)
     })
 
     conn.on('data', (raw) => {
@@ -177,7 +209,10 @@ export default function PvpLobby() {
 
     peer.on('connection', (conn) => {
       if (!isHostRef.current) return
-      if (playersRef.current.length >= MAX_PLAYERS - 1) { conn.close(); return }
+      if (playersRef.current.length >= MAX_PLAYERS - 1) {
+        conn.close()
+        return
+      }
       wireClientConn(conn)
       setPhase('room')
     })
@@ -223,7 +258,9 @@ export default function PvpLobby() {
       <div className="pvp-lobby">
         <h2 className="pvp-lobby__title">Player vs Player</h2>
         <form className="pvp-lobby__form" onSubmit={handleNameSubmit}>
-          <label className="pvp-lobby__label" htmlFor="pvp-name">Your name</label>
+          <label className="pvp-lobby__label" htmlFor="pvp-name">
+            Your name
+          </label>
           <input
             id="pvp-name"
             className="pvp-lobby__input"
@@ -247,7 +284,9 @@ export default function PvpLobby() {
     return (
       <div className="pvp-lobby">
         <h2 className="pvp-lobby__title">Lobby</h2>
-        <p className="pvp-lobby__you">You: <strong>{name}</strong></p>
+        <p className="pvp-lobby__you">
+          You: <strong>{name}</strong>
+        </p>
 
         {!myPeerId && <p className="pvp-lobby__hint">Connecting to network…</p>}
 
@@ -296,23 +335,31 @@ export default function PvpLobby() {
       <div className="pvp-lobby">
         <h2 className="pvp-lobby__title">Host disconnected</h2>
         <p className="pvp-lobby__hint">The host left the room.</p>
-        <button className="hol-btn" onClick={() => { setHostLeft(false); setPhase('lobby'); setPlayers([]); playersRef.current = []; setChatMessages([]) }}>
+        <button
+          className="hol-btn"
+          onClick={() => {
+            setHostLeft(false)
+            setPhase('lobby')
+            setPlayers([])
+            playersRef.current = []
+            setChatMessages([])
+          }}
+        >
           Back to lobby
         </button>
       </div>
     )
   }
 
-  const allPlayers: PlayerInfo[] = [
-    { peerId: myPeerId ?? '', name },
-    ...players,
-  ]
+  const allPlayers: PlayerInfo[] = [{ peerId: myPeerId ?? '', name }, ...players]
   const isFull = allPlayers.length >= MAX_PLAYERS
 
   return (
     <div className="pvp-room">
       <aside className="pvp-room__sidebar">
-        <h2 className="pvp-lobby__title">Room — {allPlayers.length}/{MAX_PLAYERS}</h2>
+        <h2 className="pvp-lobby__title">
+          Room — {allPlayers.length}/{MAX_PLAYERS}
+        </h2>
 
         {isHost && !isFull && myPeerId && (
           <div className="pvp-lobby__id-row">
@@ -330,7 +377,9 @@ export default function PvpLobby() {
               <span className="pvp-lobby__player-name">
                 {p.name}
                 {p.peerId === myPeerId && <span className="pvp-lobby__tag"> you</span>}
-                {isHost && p.peerId === myPeerId && <span className="pvp-lobby__tag pvp-lobby__tag--host"> host</span>}
+                {isHost && p.peerId === myPeerId && (
+                  <span className="pvp-lobby__tag pvp-lobby__tag--host"> host</span>
+                )}
               </span>
             </li>
           ))}
@@ -342,9 +391,11 @@ export default function PvpLobby() {
           ))}
         </ul>
 
-        {isFull
-          ? <p className="pvp-lobby__hint pvp-lobby__hint--ready">All players connected!</p>
-          : <p className="pvp-lobby__hint">Waiting for players…</p>}
+        {isFull ? (
+          <p className="pvp-lobby__hint pvp-lobby__hint--ready">All players connected!</p>
+        ) : (
+          <p className="pvp-lobby__hint">Waiting for players…</p>
+        )}
 
         {peerError && <p className="pvp-lobby__error">{peerError}</p>}
       </aside>
@@ -358,8 +409,10 @@ export default function PvpLobby() {
                 <span className="pvp-chat__msg-text">{m.text}</span>
               </div>
             ) : (
-              <div key={m.id} className="pvp-chat__msg pvp-chat__msg--system">{m.text}</div>
-            )
+              <div key={m.id} className="pvp-chat__msg pvp-chat__msg--system">
+                {m.text}
+              </div>
+            ),
           )}
           <div ref={chatEndRef} />
         </div>
