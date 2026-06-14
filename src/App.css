@@ -1,0 +1,307 @@
+/* ── Layout ── */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-header {
+  position: relative;
+  text-align: center;
+  padding: 0.875rem 2rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.app-header h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+
+.app-main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  gap: 2.5rem;
+  padding: 1.75rem 2rem;
+  align-items: flex-start;
+  overflow: hidden;
+}
+
+.status-message {
+  text-align: center;
+  margin-top: 3rem;
+  color: var(--text-muted);
+}
+
+.status-message--error {
+  color: var(--error);
+}
+
+/* ── Theme toggle ── */
+.theme-toggle {
+  position: absolute;
+  top: 50%;
+  left: 1.25rem;
+  transform: translateY(-50%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 6px;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.theme-toggle:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+/* ── Card Display (left) ── */
+.card-display {
+  flex: 0 0 46%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  min-height: 0;
+}
+
+.card-image-area {
+  /*
+   * width: min(100%, vh-budget) keeps the element square.
+   * If we just wrote width:100% + max-height, the browser won't shrink
+   * the width to match the clamped height, so the box goes rectangular.
+   * Using min() lets the width self-limit, and aspect-ratio:1 then sets
+   * height = width, producing a perfect square that always fits the viewport.
+   */
+  width: min(100%, calc(100vh - 240px));
+  aspect-ratio: 1;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--surface);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.card-image {
+  position: absolute;
+  object-fit: cover;
+  transition:
+    width 0.35s ease,
+    height 0.35s ease,
+    left 0.35s ease,
+    top 0.35s ease;
+  user-select: none;
+}
+
+.card-image-placeholder {
+  width: 100%;
+  height: 100%;
+  background: var(--surface);
+}
+
+/* ── Zoom controls ── */
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-wrap: wrap;
+}
+
+.zoom-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.875rem;
+  transition: color 0.15s;
+  user-select: none;
+}
+
+.zoom-btn:not(.zoom-btn--active):not(.zoom-btn--past):not(.zoom-btn--giveup):hover {
+  color: var(--text);
+}
+
+.zoom-btn--active {
+  color: var(--accent);
+  font-weight: 600;
+  cursor: default;
+}
+
+.zoom-btn--past {
+  color: var(--zoom-past);
+  cursor: default;
+}
+
+.zoom-btn--giveup {
+  color: var(--text-muted);
+  margin-left: 0.25rem;
+}
+
+.zoom-btn--giveup:hover:not(:disabled) {
+  color: var(--error);
+}
+
+.zoom-btn--giveup:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ── Game info ── */
+.game-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+/* ── Game panel (right) ── */
+.game-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* ── Card search ── */
+.card-search {
+  position: relative;
+}
+
+.card-search-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  padding: 0.5rem 0;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.card-search-input::placeholder {
+  color: var(--text-dim);
+}
+
+.card-search-input:focus {
+  border-bottom-color: var(--accent);
+}
+
+.card-search-input:disabled {
+  opacity: 0.4;
+}
+
+.search-dropdown {
+  /* position/top/left/width set inline by the portal */
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  max-height: 280px;
+  overflow-y: auto;
+  z-index: 9999;
+  box-shadow: 0 6px 16px var(--shadow);
+}
+
+.search-dropdown-item {
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--text);
+  user-select: none;
+}
+
+.search-dropdown-item:hover {
+  background: var(--surface-hover);
+}
+
+/* ── Wrong guesses ── */
+.wrong-guesses {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.wrong-guess-item {
+  font-size: 0.875rem;
+  color: var(--error);
+  padding: 0.1rem 0;
+}
+
+.wrong-guess-item::before {
+  content: '✕  ';
+  font-size: 0.75rem;
+}
+
+/* ── Previous rounds ── */
+.previous-rounds h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 1rem;
+}
+
+.round-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.round-entry {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.round-thumbnail {
+  width: 130px;
+  height: 130px;
+  background: var(--surface);
+  border-radius: 4px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.round-thumbnail-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.round-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding-top: 0.35rem;
+}
+
+.round-info__name {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.round-info__result {
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.round-info__result--correct {
+  color: var(--success);
+}
+
+.round-info__result--wrong {
+  color: var(--text-muted);
+}
