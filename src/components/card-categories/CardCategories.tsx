@@ -91,16 +91,8 @@ export default function CardCategories() {
   const searchDropdownRect = useRef<DOMRect | null>(null)
 
   // Refs for stable access inside event handlers
-  const peerRef = useRef<
-    | Peer
-    | {
-        id: string
-        on: (e: string, cb: (...a: unknown[]) => void) => void
-        connect: (id: string) => AnyDataConnection
-        destroy: () => void
-      }
-    | null
-  >(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const peerRef = useRef<any>(null)
   const myNameRef = useRef('')
   const myPeerIdRef = useRef('')
   const isHostRef = useRef(false)
@@ -519,7 +511,7 @@ export default function CardCategories() {
       }
     })
 
-    conn.on('error', (err) => setPeerError(err.message))
+    conn.on('error', (err: any) => setPeerError(err.message))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const wireHostConn = useCallback((conn: AnyDataConnection) => {
@@ -570,7 +562,7 @@ export default function CardCategories() {
       clearTimeout(connTimeout)
       setHostLeft(true)
     })
-    conn.on('error', (err) => {
+    conn.on('error', (err: any) => {
       clearTimeout(connTimeout)
       setPeerError(err.message)
     })
@@ -584,19 +576,22 @@ export default function CardCategories() {
     isSoloRef.current = false
     setIsHost(true)
     setIsSolo(false)
-    // On localhost use a BroadcastChannel transport instead of PeerJS/WebRTC.
-    // Firefox isolates mDNS ICE candidates between normal + private browsing
-    // contexts and may block STUN/TURN servers with Enhanced Tracking Protection,
-    // making WebRTC fail.  BroadcastChannel works reliably across same-origin tabs.
+    // On localhost use WebSocket relay transport (scripts/relay-server.mjs)
+    // instead of PeerJS/WebRTC. Firefox private mode isolates mDNS ICE candidates
+    // and partitions BroadcastChannel, making both WebRTC and BroadcastChannel
+    // fail between normal + private tabs.
     const isLocalDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
-    const peer = isLocalDev ? createLocalPeer() : new Peer({ config: { iceServers: ICE_SERVERS } })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const peer: any = isLocalDev
+      ? createLocalPeer()
+      : new Peer({ config: { iceServers: ICE_SERVERS } })
     peerRef.current = peer
-    peer.on('open', (id) => {
+    peer.on('open', (id: string) => {
       myPeerIdRef.current = id
       setMyPeerId(id)
       setLobbyPhase('lobby')
     })
-    peer.on('connection', (conn) => {
+    peer.on('connection', (conn: AnyDataConnection) => {
       if (!isHostRef.current || playersRef.current.length >= MAX_PLAYERS - 1) {
         conn.close()
         return
@@ -604,7 +599,7 @@ export default function CardCategories() {
       wireClientConn(conn)
       setLobbyPhase('room')
     })
-    peer.on('error', (err) => setPeerError(err.message))
+    peer.on('error', (err: Error) => setPeerError(err.message))
   }
 
   const handleJoin = (e: React.FormEvent) => {
