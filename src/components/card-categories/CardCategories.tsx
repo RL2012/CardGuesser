@@ -118,7 +118,8 @@ export default function CardCategories() {
   // Host-only authoritative game data
   const hostGameRef = useRef({
     activePlayers: [] as string[],
-    leaderQueue: [] as string[],
+    playerOrder: [] as string[],  // fixed rotation order, established at game start
+    leaderIdx: 0,                 // ever-incrementing; mod activePlayers.length gives next leader
     guesserOrder: [] as string[],
     guesserIdx: 0,
     usedCardIds: new Set<number>(),
@@ -302,7 +303,8 @@ export default function CardCategories() {
     const lives = Object.fromEntries(allIds.map((id) => [id, MAX_LIVES]))
     hostGameRef.current = {
       activePlayers: [...allIds],
-      leaderQueue: [...allIds].sort(() => Math.random() - 0.5),
+      playerOrder: [...allIds].sort(() => Math.random() - 0.5),
+      leaderIdx: 0,
       guesserOrder: [],
       guesserIdx: 0,
       usedCardIds: new Set(),
@@ -324,20 +326,10 @@ export default function CardCategories() {
       return
     }
 
-    if (hg.leaderQueue.length === 0) {
-      hg.leaderQueue = [...active].sort(() => Math.random() - 0.5)
-    }
-
-    let leader: string | undefined
-    while (hg.leaderQueue.length > 0) {
-      const candidate = hg.leaderQueue.shift()!
-      if (active.includes(candidate)) {
-        leader = candidate
-        break
-      }
-    }
-
-    if (!leader) leader = active[Math.floor(Math.random() * active.length)]
+    // Rotate through playerOrder, skipping eliminated players, in a fixed sequence
+    const orderedActive = hg.playerOrder.filter((id) => active.includes(id))
+    const leader = orderedActive[hg.leaderIdx % orderedActive.length]
+    hg.leaderIdx++
 
     hg.usedCardIds = new Set()
     hg.guesserOrder = []
@@ -352,12 +344,18 @@ export default function CardCategories() {
     const cat = gameStateRef.current.categories[idx]
     if (!cat) return
 
-    const active = hostGameRef.current.activePlayers
+    const hg = hostGameRef.current
+    const orderedActive = hg.playerOrder.filter((id) => hg.activePlayers.includes(id))
 
-    const startIdx = Math.floor(Math.random() * active.length)
-    const order = [...active.slice(startIdx), ...active.slice(0, startIdx)]
-    hostGameRef.current.guesserOrder = order
-    hostGameRef.current.guesserIdx = 0
+    // Guessing starts from the player immediately after the leader so that
+    // selecting a category and guessing first are always separate turns.
+    const leaderPeerId = gameStateRef.current.currentLeader ?? ''
+    const leaderPos = orderedActive.indexOf(leaderPeerId)
+    const startIdx = orderedActive.length > 1 ? (leaderPos + 1) % orderedActive.length : 0
+    const order = [...orderedActive.slice(startIdx), ...orderedActive.slice(0, startIdx)]
+
+    hg.guesserOrder = order
+    hg.guesserIdx = 0
     broadcastGame({ type: 'guessing-start', category: cat, guesserOrder: order })
   }
 
@@ -411,7 +409,6 @@ export default function CardCategories() {
     if (curLives <= 0) {
       eliminated = guesserPeerId
       hg.activePlayers = hg.activePlayers.filter((id) => id !== guesserPeerId)
-      hg.leaderQueue = hg.leaderQueue.filter((id) => id !== guesserPeerId)
     }
 
     broadcastGame({ type: 'guess-wrong', guesser: guesserPeerId, lives: newLives, eliminated, cardId, cardName })
@@ -471,7 +468,8 @@ export default function CardCategories() {
 
     hostGameRef.current = {
       activePlayers: [LOCAL_PEER_ID],
-      leaderQueue: [LOCAL_PEER_ID],
+      playerOrder: [LOCAL_PEER_ID],
+      leaderIdx: 0,
       guesserOrder: [LOCAL_PEER_ID],
       guesserIdx: 0,
       usedCardIds: new Set(),
@@ -535,7 +533,6 @@ export default function CardCategories() {
         if (gameStateRef.current.phase !== 'game-over') {
           const hg = hostGameRef.current
           hg.activePlayers = hg.activePlayers.filter((id) => id !== conn.peer)
-          hg.leaderQueue = hg.leaderQueue.filter((id) => id !== conn.peer)
           if (hg.activePlayers.length <= 1)
             broadcastGame({ type: 'game-over', winner: hg.activePlayers[0] ?? '' })
           else if (gameStateRef.current.phase === 'guessing') {
