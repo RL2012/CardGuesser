@@ -22,13 +22,13 @@ A category is shown (e.g. "LIGHT Dragons", "Beast Fusion monsters", "Monsters wi
 - **Solo:** A category is auto-picked each round. Guess 3 correct cards to win the round and earn a point. One wrong guess costs a life. 3 lives total.
 - **Multiplayer** (up to 4 players, WebRTC via PeerJS): A leader picks from 3 categories each round, then players guess in rotation. Wrong guess loses a life and eliminates that player from the round; last player with lives remaining wins.
 
-Categories are generated from templates (race + attribute, race + card type, ATK value, DEF value). Race-combo categories are weighted much more likely than ATK/DEF categories.
+Categories are generated from a weighted pool of templates: race + attribute, race/attribute/type combos, archetype, level + race/attribute/type (with Link Rating support), card set membership, ban list status, top-100-this-week, and release year. ATK/DEF-value categories are rare; combination categories are most common.
 
 ---
 
 ## Leaderboards
 
-Card Guesser and Higher or Lower track your top 5 high scores locally (localStorage). After each game you're prompted to enter your name. View all leaderboards from the **Home** tab.
+Card Guesser, Higher or Lower, and Card Categories (solo) each track your top 5 high scores locally (localStorage). After each game you're prompted to enter your name. View all leaderboards from the **Home** tab.
 
 ---
 
