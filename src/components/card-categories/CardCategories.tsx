@@ -91,6 +91,7 @@ export default function CardCategories() {
   const [searchOpen, setSearchOpen] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null)
+  const [turnDeadline, setTurnDeadline] = useState<number | null>(null)
 
   // Refs for stable access inside event handlers
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -105,10 +106,19 @@ export default function CardCategories() {
   const chatEndRef = useRef<HTMLDivElement | null>(null)
   const cardsRef = useRef(cards)
   const gameStateRef = useRef<GameState>(INIT_GAME_STATE)
+  const turnTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [, setCountdownTick] = useState(0)
 
   useEffect(() => {
     cardsRef.current = cards
   }, [cards])
+
+  // Re-render every 500 ms while a turn deadline is active so the countdown stays live
+  useEffect(() => {
+    if (turnDeadline === null) return
+    const id = setInterval(() => setCountdownTick((n) => n + 1), 500)
+    return () => clearInterval(id)
+  }, [turnDeadline])
 
   // Scroll chat to bottom
   const scrollChat = () => {
@@ -124,6 +134,25 @@ export default function CardCategories() {
     guesserIdx: 0,
     usedCardIds: new Set<number>(),
   })
+
+  // ── Turn timer (multiplayer only) ─────────────────────────────────────────────
+
+  function clearTurnTimer() {
+    if (turnTimerRef.current !== null) {
+      clearTimeout(turnTimerRef.current)
+      turnTimerRef.current = null
+    }
+  }
+
+  function startTurnTimer(guesserPeerId: string) {
+    clearTurnTimer()
+    turnTimerRef.current = setTimeout(() => {
+      if (gameStateRef.current.phase !== 'guessing') return
+      const hg = hostGameRef.current
+      if (hg.guesserOrder[hg.guesserIdx] !== guesserPeerId) return
+      hostHandleWrong(guesserPeerId, null, null)
+    }, 60_000)
+  }
 
   // ── Fuzzy search ─────────────────────────────────────────────────────────────
 
@@ -248,6 +277,7 @@ export default function CardCategories() {
         wrongCard: null,
         winner: null,
       }
+      setTurnDeadline(null)
     } else if (msg.type === 'guessing-start') {
       next = {
         ...next,
@@ -258,6 +288,7 @@ export default function CardCategories() {
       }
       setSearchQuery('')
       setSearchOpen(false)
+      setTurnDeadline(msg.turnDeadline ?? null)
     } else if (msg.type === 'guess-correct') {
       const newGuess: GuessRecord = {
         peerId: msg.guesser,
@@ -273,6 +304,7 @@ export default function CardCategories() {
       }
       setSearchQuery('')
       setSearchOpen(false)
+      setTurnDeadline(msg.turnDeadline ?? null)
     } else if (msg.type === 'guess-wrong') {
       next = {
         ...next,
@@ -282,12 +314,14 @@ export default function CardCategories() {
       }
       setSearchQuery('')
       setSearchOpen(false)
+      setTurnDeadline(null)
       setTimeout(() => {
         setGameState((gs) => ({ ...gs, wrongFlash: null, wrongCard: null }))
         gameStateRef.current = { ...gameStateRef.current, wrongFlash: null, wrongCard: null }
       }, 1800)
     } else if (msg.type === 'game-over') {
       next = { ...next, phase: 'game-over', winner: msg.winner }
+      setTurnDeadline(null)
     } else {
       return
     }
@@ -356,7 +390,9 @@ export default function CardCategories() {
 
     hg.guesserOrder = order
     hg.guesserIdx = 0
-    broadcastGame({ type: 'guessing-start', category: cat, guesserOrder: order })
+    const deadline = !isSoloRef.current ? Date.now() + 60_000 : undefined
+    broadcastGame({ type: 'guessing-start', category: cat, guesserOrder: order, turnDeadline: deadline })
+    if (!isSoloRef.current) startTurnTimer(order[0])
   }
 
   function hostProcessGuess(guesserPeerId: string, cardId: number) {
@@ -380,13 +416,16 @@ export default function CardCategories() {
     hg.usedCardIds.add(cardId)
     const nextIdx = isSoloRef.current ? 0 : (hg.guesserIdx + 1) % hg.guesserOrder.length
     hg.guesserIdx = nextIdx
+    const nextDeadline = !isSoloRef.current ? Date.now() + 60_000 : undefined
     broadcastGame({
       type: 'guess-correct',
       guesser: guesserPeerId,
       cardId,
       cardName: card.name,
       nextGuesserIdx: nextIdx,
+      turnDeadline: nextDeadline,
     })
+    if (!isSoloRef.current) startTurnTimer(hg.guesserOrder[nextIdx])
 
     // Solo: 3 correct guesses in a row = round won, award a point
     if (isSoloRef.current && gameStateRef.current.correctGuesses.length === 3) {
@@ -400,6 +439,7 @@ export default function CardCategories() {
   }
 
   function hostHandleWrong(guesserPeerId: string, cardId: number | null = null, cardName: string | null = null) {
+    clearTurnTimer()
     const hg = hostGameRef.current
     const gs = gameStateRef.current
     const curLives = (gs.lives[guesserPeerId] ?? 1) - 1
@@ -533,11 +573,15 @@ export default function CardCategories() {
         if (gameStateRef.current.phase !== 'game-over') {
           const hg = hostGameRef.current
           hg.activePlayers = hg.activePlayers.filter((id) => id !== conn.peer)
-          if (hg.activePlayers.length <= 1)
+          if (hg.activePlayers.length <= 1) {
+            clearTurnTimer()
             broadcastGame({ type: 'game-over', winner: hg.activePlayers[0] ?? '' })
-          else if (gameStateRef.current.phase === 'guessing') {
+          } else if (gameStateRef.current.phase === 'guessing') {
+            const wasCurrentGuesser = hg.guesserOrder[hg.guesserIdx] === conn.peer
             hg.guesserOrder = hg.guesserOrder.filter((id) => id !== conn.peer)
             if (hg.guesserIdx >= hg.guesserOrder.length) hg.guesserIdx = 0
+            if (wasCurrentGuesser && hg.guesserOrder.length > 0)
+              startTurnTimer(hg.guesserOrder[hg.guesserIdx])
           }
         }
       }
@@ -679,6 +723,7 @@ export default function CardCategories() {
   }
 
   function resetToLobby() {
+    clearTurnTimer()
     peerRef.current?.destroy()
     peerRef.current = null
     setLobbyPhase('setup')
@@ -704,6 +749,9 @@ export default function CardCategories() {
   const iAmLeader = isSolo || gs.currentLeader === myPeerId
   const currentGuesserPeerId = gs.guesserOrder[gs.currentGuesserIdx]
   const iAmGuesser = isSolo || currentGuesserPeerId === myPeerId
+  const secondsLeft = !isSolo && turnDeadline !== null
+    ? Math.max(0, Math.ceil((turnDeadline - Date.now()) / 1000))
+    : null
 
   function renderLives(peerId: string) {
     const l = gs.lives[peerId] ?? MAX_LIVES
@@ -1032,9 +1080,22 @@ export default function CardCategories() {
             {iAmGuesser
               ? 'Your turn — type a card name below!'
               : `Waiting for ${playerNameForRender(currentGuesserPeerId ?? '')}…`}
+            {secondsLeft !== null && (
+              <span className={`cc-turn-timer${secondsLeft <= 10 ? ' cc-turn-timer--urgent' : ''}`}>
+                {secondsLeft}s
+              </span>
+            )}
           </p>
         )}
       </div>
+      {secondsLeft !== null && (
+        <div className="cc-turn-timer-bar">
+          <div
+            className={`cc-turn-timer-bar__fill${secondsLeft <= 10 ? ' cc-turn-timer-bar__fill--urgent' : ''}`}
+            style={{ width: `${(secondsLeft / 60) * 100}%` }}
+          />
+        </div>
+      )}
 
       {soloRoundWon && <div className="cc-round-won-flash">✓ Round complete! +1 point</div>}
 

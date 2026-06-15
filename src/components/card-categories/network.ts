@@ -29,7 +29,7 @@ export type ToClientMsg =
   | { type: 'chat'; name: string; text: string }
   | { type: 'game-start' }
   | { type: 'round-start'; leader: string; categories: import('./categoryUtils').Category[]; lives: Record<string, number> }
-  | { type: 'guessing-start'; category: import('./categoryUtils').Category; guesserOrder: string[] }
-  | { type: 'guess-correct'; guesser: string; cardId: number; cardName: string; nextGuesserIdx: number }
+  | { type: 'guessing-start'; category: import('./categoryUtils').Category; guesserOrder: string[]; turnDeadline?: number }
+  | { type: 'guess-correct'; guesser: string; cardId: number; cardName: string; nextGuesserIdx: number; turnDeadline?: number }
   | { type: 'guess-wrong'; guesser: string; lives: Record<string, number>; eliminated: string | null; cardId: number | null; cardName: string | null }
   | { type: 'game-over'; winner: string }
