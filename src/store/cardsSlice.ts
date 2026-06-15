@@ -1,11 +1,25 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
-import type { Card } from '../types'
+import type { Card, CardSet } from '../types'
 
-const YGOPRO_API = 'https://db.ygoprodeck.com/api/v7/cardinfo.php'
+const YGOPRO_API = 'https://db.ygoprodeck.com/api/v7/cardinfo.php?misc=yes'
+
+interface YgoCardSet {
+  set_name: string
+  set_code: string
+  set_rarity: string
+  set_price: string
+}
+
+interface YgoMiscInfo {
+  views: number
+  viewsweek: number
+  tcg_date?: string
+}
 
 interface YgoCard {
   id: number
   name: string
+  type?: string
   frameType?: string
   attribute?: string
   atk?: number
@@ -13,6 +27,10 @@ interface YgoCard {
   level?: number
   linkval?: number
   race?: string
+  archetype?: string
+  card_sets?: YgoCardSet[]
+  banlist_info?: { ban_tcg?: string }
+  misc_info?: YgoMiscInfo[]
 }
 
 interface YgoResponse {
@@ -37,23 +55,64 @@ function parseNum(s: string | undefined): number | null {
   return isNaN(n) ? null : n
 }
 
+// Flat file format (columns 0–14):
+// id|name|frameType|type|attribute|atk|def|level|race|archetype|sets(JSON)|banTcg|views|viewsWeek|tcgDate
 function parseLine(line: string): Card {
-  const parts = line.split('|')
+  const p = line.split('|')
+  let cardSets: CardSet[] = []
+  try {
+    cardSets = p[10] ? JSON.parse(p[10]) : []
+  } catch {
+    cardSets = []
+  }
   return {
-    id: parseInt(parts[0]),
-    name: parts[1] ?? '',
-    frameType: parts[2] ?? '',
-    attribute: parts[3] ?? '',
-    atk: parseNum(parts[4]),
-    def: parseNum(parts[5]),
-    level: parseNum(parts[6]),
-    race: parts[7] ?? '',
+    id: parseInt(p[0]),
+    name: p[1] ?? '',
+    frameType: p[2] ?? '',
+    type: p[3] ?? '',
+    attribute: p[4] ?? '',
+    atk: parseNum(p[5]),
+    def: parseNum(p[6]),
+    level: parseNum(p[7]),
+    race: p[8] ?? '',
+    archetype: p[9] || null,
+    cardSets,
+    banTcg: p[11] || null,
+    views: parseInt(p[12]) || 0,
+    viewsWeek: parseInt(p[13]) || 0,
+    tcgDate: p[14] || null,
+  }
+}
+
+function mapYgoCard(c: YgoCard): Card {
+  const misc = c.misc_info?.[0]
+  return {
+    id: c.id,
+    name: c.name,
+    frameType: c.frameType ?? '',
+    type: c.type ?? '',
+    attribute: c.attribute ?? '',
+    atk: c.atk ?? null,
+    def: c.def ?? null,
+    level: c.level ?? c.linkval ?? null,
+    race: c.race ?? '',
+    archetype: c.archetype ?? null,
+    cardSets: (c.card_sets ?? []).map((s) => ({
+      setName: s.set_name,
+      setCode: s.set_code,
+      setRarity: s.set_rarity,
+      setPrice: s.set_price,
+    })),
+    banTcg: c.banlist_info?.ban_tcg ?? null,
+    views: misc?.views ?? 0,
+    viewsWeek: misc?.viewsweek ?? 0,
+    tcgDate: misc?.tcg_date ?? null,
   }
 }
 
 export const fetchCards = createAsyncThunk('cards/fetch', async () => {
-  // Try pre-generated static file first (id|name|frameType|attribute|atk|def|level|race per line)
-  const txtRes = await fetch('/cards.txt').catch(() => null)
+  // Try pre-generated static file first
+  const txtRes = await fetch('/CardGuesser/cards.txt').catch(() => null)
   if (txtRes?.ok) {
     const text = await txtRes.text()
     return text.split('\n').map((l) => l.trim()).filter(Boolean).map(parseLine)
@@ -63,16 +122,7 @@ export const fetchCards = createAsyncThunk('cards/fetch', async () => {
   const apiRes = await fetch(YGOPRO_API)
   if (!apiRes.ok) throw new Error(`API error ${apiRes.status}`)
   const json: YgoResponse = await apiRes.json()
-  return json.data.map((c): Card => ({
-    id: c.id,
-    name: c.name,
-    frameType: c.frameType ?? '',
-    attribute: c.attribute ?? '',
-    atk: c.atk ?? null,
-    def: c.def ?? null,
-    level: c.level ?? c.linkval ?? null,
-    race: c.race ?? '',
-  }))
+  return json.data.map(mapYgoCard)
 })
 
 const cardsSlice = createSlice({

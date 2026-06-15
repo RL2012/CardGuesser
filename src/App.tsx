@@ -3,11 +3,11 @@ import { useAppDispatch, useAppSelector } from './hooks'
 import { fetchCards } from './store/cardsSlice'
 import CardGuesser from './components/card-guesser/CardGuesser'
 import HigherOrLower from './components/higher-or-lower/HigherOrLower'
-import PvpLobby from './components/pvp-lobby/PvpLobby'
+import CardCategories from './components/card-categories/CardCategories'
 import Homepage from './components/Homepage'
 import './App.css'
 
-type GameMode = 'home' | 'card-guesser' | 'higher-or-lower' | 'pvp'
+type GameMode = 'home' | 'card-guesser' | 'higher-or-lower' | 'card-categories'
 
 export default function App() {
   const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark')
@@ -52,10 +52,10 @@ export default function App() {
             Higher or Lower
           </button>
           <button
-            className={`game-tab${activeGame === 'pvp' ? ' game-tab--active' : ''}`}
-            onClick={() => setActiveGame('pvp')}
+            className={`game-tab${activeGame === 'card-categories' ? ' game-tab--active' : ''}`}
+            onClick={() => setActiveGame('card-categories')}
           >
-            PvP
+            Card Categories
           </button>
         </nav>
       </header>
@@ -73,7 +73,7 @@ export default function App() {
         <>
           {activeGame === 'card-guesser' && <CardGuesser />}
           {activeGame === 'higher-or-lower' && <HigherOrLower />}
-          {activeGame === 'pvp' && <PvpLobby />}
+          {activeGame === 'card-categories' && <CardCategories />}
         </>
       )}
     </div>
