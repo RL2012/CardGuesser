@@ -59,7 +59,7 @@ function parseNum(s: string | undefined): number | null {
 // id|name|frameType|type|attribute|atk|def|level|race|archetype|sets(JSON)|banTcg|views|viewsWeek|tcgDate
 function parseLine(line: string): Card {
   const p = line.split('|')
-  let cardSets: CardSet[] = []
+  let cardSets: CardSet[]
   try {
     cardSets = p[10] ? JSON.parse(p[10]) : []
   } catch {
@@ -115,7 +115,11 @@ export const fetchCards = createAsyncThunk('cards/fetch', async () => {
   const txtRes = await fetch('/CardGuesser/cards.txt').catch(() => null)
   if (txtRes?.ok) {
     const text = await txtRes.text()
-    return text.split('\n').map((l) => l.trim()).filter(Boolean).map(parseLine)
+    return text
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .map(parseLine)
   }
 
   // Fall back to live API

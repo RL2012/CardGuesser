@@ -104,7 +104,9 @@ export default function CardCategories() {
   const cardsRef = useRef(cards)
   const gameStateRef = useRef<GameState>(INIT_GAME_STATE)
 
-  cardsRef.current = cards
+  useEffect(() => {
+    cardsRef.current = cards
+  }, [cards])
 
   // Scroll chat to bottom
   const scrollChat = () => {
@@ -149,18 +151,19 @@ export default function CardCategories() {
       const norm = (s: string) => s.toLowerCase().replace(/[\s\-']/g, '')
       if (norm(debouncedQuery).includes(norm(cat.archetype))) return []
     }
-    const used = new Set(gameStateRef.current.usedCardIds)
+    const used = new Set(gameState.usedCardIds)
     return fuse
       .search(debouncedQuery, { limit: 10 })
       .map((r) => r.item)
       .filter((c) => !used.has(c.id))
-  }, [fuse, debouncedQuery, gameState.selectedCategory])
+  }, [fuse, debouncedQuery, gameState.selectedCategory, gameState.usedCardIds])
 
   // ── Player helpers ────────────────────────────────────────────────────────────
 
-  function playerName(peerId: string): string {
-    if (peerId === myPeerIdRef.current) return myNameRef.current
-    return playersRef.current.find((p) => p.peerId === peerId)?.name ?? peerId.slice(0, 6)
+  // Render-safe version (uses state, not refs) to avoid react-hooks/refs errors.
+  function playerNameForRender(peerId: string): string {
+    if (peerId === myPeerId) return name
+    return players.find((p) => p.peerId === peerId)?.name ?? peerId.slice(0, 6)
   }
 
   function addPlayer(info: PlayerInfo) {
@@ -306,6 +309,7 @@ export default function CardCategories() {
         break
       }
     }
+
     if (!leader) leader = active[Math.floor(Math.random() * active.length)]
 
     hg.usedCardIds = new Set()
@@ -322,6 +326,7 @@ export default function CardCategories() {
     if (!cat) return
 
     const active = hostGameRef.current.activePlayers
+
     const startIdx = Math.floor(Math.random() * active.length)
     const order = [...active.slice(startIdx), ...active.slice(0, startIdx)]
     hostGameRef.current.guesserOrder = order
@@ -402,6 +407,7 @@ export default function CardCategories() {
   function soloStartNewRound() {
     hostGameRef.current.usedCardIds = new Set()
     const cats = generateCategories(cardsRef.current)
+
     const picked = cats[Math.floor(Math.random() * cats.length)]
     const next: GameState = {
       ...gameStateRef.current,
@@ -511,6 +517,7 @@ export default function CardCategories() {
       }
     })
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     conn.on('error', (err: any) => setPeerError(err.message))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -562,6 +569,7 @@ export default function CardCategories() {
       clearTimeout(connTimeout)
       setHostLeft(true)
     })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     conn.on('error', (err: any) => {
       clearTimeout(connTimeout)
       setPeerError(err.message)
@@ -908,7 +916,7 @@ export default function CardCategories() {
         />
       )
     }
-    const winnerName = gs.winner ? playerName(gs.winner) : null
+    const winnerName = gs.winner ? playerNameForRender(gs.winner) : null
     return (
       <div className="cc-gameover">
         <h2 className="cc-gameover__title">Game Over!</h2>
@@ -925,7 +933,7 @@ export default function CardCategories() {
         <div className="cc-gameover__final-lives">
           {allPlayers.map((p) => (
             <div key={p.peerId} className="cc-gameover__player">
-              <span className="cc-gameover__player-name">{playerName(p.peerId)}</span>
+              <span className="cc-gameover__player-name">{playerNameForRender(p.peerId)}</span>
               {renderLives(p.peerId)}
             </div>
           ))}
@@ -943,7 +951,7 @@ export default function CardCategories() {
         <div className="cc-lives-bar">
           {allPlayers.map((p) => (
             <div key={p.peerId} className="cc-player-life">
-              <span className="cc-player-life__name">{playerName(p.peerId)}</span>
+              <span className="cc-player-life__name">{playerNameForRender(p.peerId)}</span>
               {renderLives(p.peerId)}
             </div>
           ))}
@@ -953,8 +961,8 @@ export default function CardCategories() {
             'Pick a category to guess!'
           ) : (
             <>
-              <strong>{gs.currentLeader ? playerName(gs.currentLeader) : '?'}</strong> is choosing a
-              category…
+              <strong>{gs.currentLeader ? playerNameForRender(gs.currentLeader) : '?'}</strong> is
+              choosing a category…
             </>
           )}
         </p>
@@ -995,7 +1003,7 @@ export default function CardCategories() {
           <p className="cc-game__status">
             {iAmGuesser
               ? 'Your turn — type a card name below!'
-              : `Waiting for ${playerName(currentGuesserPeerId ?? '')}…`}
+              : `Waiting for ${playerNameForRender(currentGuesserPeerId ?? '')}…`}
           </p>
         )}
       </div>
@@ -1004,7 +1012,7 @@ export default function CardCategories() {
 
       {!soloRoundWon && gs.wrongFlash && (
         <div className="cc-wrong-flash">
-          ✕ {isSolo ? 'Wrong!' : `${playerName(gs.wrongFlash)} guessed wrong`}
+          ✕ {isSolo ? 'Wrong!' : `${playerNameForRender(gs.wrongFlash)} guessed wrong`}
           {' — '}
           {gs.lives[gs.wrongFlash] ?? 0} {(gs.lives[gs.wrongFlash] ?? 0) === 1 ? 'life' : 'lives'}{' '}
           left
@@ -1012,6 +1020,7 @@ export default function CardCategories() {
       )}
 
       <div className="cc-columns">
+        {}
         {allPlayers.map((p) => {
           const isMyCol = isSolo || p.peerId === myPeerId
           const isCurrentGuesser = isSolo || p.peerId === currentGuesserPeerId
@@ -1024,7 +1033,7 @@ export default function CardCategories() {
               className={`cc-player-col${isCurrentGuesser ? ' cc-player-col--active' : ''}${isDead ? ' cc-player-col--eliminated' : ''}`}
             >
               <div className="cc-player-col__header">
-                <div className="cc-player-col__name">{playerName(p.peerId)}</div>
+                <div className="cc-player-col__name">{playerNameForRender(p.peerId)}</div>
                 {renderLives(p.peerId)}
               </div>
               <div className="cc-player-col__guesses">

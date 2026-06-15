@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm run dev          # Start Vite dev server + WebSocket relay (concurrently)
 npm run dev:relay    # Start just the WebSocket relay server (scripts/relay-server.mjs)
 npm run build        # Type-check + production build (tsc -b && vite build)
-npm run lint         # ESLint
+npm run lint         # ESLint (must pass before committing — runs automatically via pre-commit hook)
 npm run lint:fix     # ESLint with auto-fix
 npm run format       # Prettier write
 npm run preview      # Preview production build locally
@@ -16,6 +16,11 @@ npm run fetch-cards  # Regenerate public/cards.txt from ygoprodeck API (scripts/
 ```
 
 No test suite exists — there are no test files or test scripts.
+
+## Pre-commit hook
+
+A husky pre-commit hook runs `npm run lint`. If linting fails the commit is aborted.
+Run `npm run lint:fix` to auto-fix most issues, then review and re-stage before committing.
 
 ## Architecture
 

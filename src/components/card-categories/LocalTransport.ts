@@ -68,7 +68,10 @@ export class LocalConnection {
   }
 
   send(data: unknown): void {
-    dbg('conn', `send() → peer=${this.peer.slice(0, 8)} type=${(data as any)?.type ?? typeof data}`)
+    dbg(
+      'conn',
+      `send() → peer=${this.peer.slice(0, 8)} type=${(data as Record<string, unknown>)?.type ?? typeof data}`,
+    )
     this.sendFn('data', data)
   }
 
@@ -92,7 +95,7 @@ export class LocalConnection {
     if (msg.type === 'data') {
       dbg(
         'conn',
-        `recv data → peer=${msg.from.slice(0, 8)} type=${(msg.payload as any)?.type ?? typeof msg.payload}`,
+        `recv data → peer=${msg.from.slice(0, 8)} type=${(msg.payload as Record<string, unknown>)?.type ?? typeof msg.payload}`,
       )
       this.callbacks['data']?.(msg.payload)
     } else if (msg.type === 'conn-close') {
