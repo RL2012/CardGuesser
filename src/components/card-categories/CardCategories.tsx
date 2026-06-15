@@ -123,15 +123,14 @@ export default function CardCategories() {
 
   const searchResults = useMemo(() => {
     if (debouncedQuery.length < 2) return []
-    // Block archetype-based searches by the archetype name itself
-    const cat = gs.selectedCategory
+    const cat = gameState.selectedCategory
     if (cat?.archetype) {
       const norm = (s: string) => s.toLowerCase().replace(/[\s\-']/g, '')
       if (norm(debouncedQuery).includes(norm(cat.archetype))) return []
     }
     const used = new Set(gameStateRef.current.usedCardIds)
     return fuse.search(debouncedQuery, { limit: 10 }).map(r => r.item).filter(c => !used.has(c.id))
-  }, [fuse, debouncedQuery, gs.selectedCategory])
+  }, [fuse, debouncedQuery, gameState.selectedCategory])
 
   // ── Player helpers ────────────────────────────────────────────────────────────
 

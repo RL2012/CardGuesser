@@ -1,5 +1,18 @@
 {
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash(git commit *)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npm run build; if ($LASTEXITCODE -ne 0) { Write-Output '{\"continue\":false,\"stopReason\":\"Build failed — commit blocked. Fix the errors above first.\"}' }",
+            "shell": "powershell",
+            "timeout": 120
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Bash",
