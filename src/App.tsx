@@ -4,13 +4,14 @@ import { fetchCards } from './store/cardsSlice'
 import CardGuesser from './components/card-guesser/CardGuesser'
 import HigherOrLower from './components/higher-or-lower/HigherOrLower'
 import PvpLobby from './components/pvp-lobby/PvpLobby'
+import Homepage from './components/Homepage'
 import './App.css'
 
-type GameMode = 'card-guesser' | 'higher-or-lower' | 'pvp'
+type GameMode = 'home' | 'card-guesser' | 'higher-or-lower' | 'pvp'
 
 export default function App() {
   const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark')
-  const [activeGame, setActiveGame] = useState<GameMode>('card-guesser')
+  const [activeGame, setActiveGame] = useState<GameMode>('home')
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light')
@@ -33,6 +34,12 @@ export default function App() {
         <h1>Card Guesser</h1>
         <nav className="game-tabs">
           <button
+            className={`game-tab${activeGame === 'home' ? ' game-tab--active' : ''}`}
+            onClick={() => setActiveGame('home')}
+          >
+            Home
+          </button>
+          <button
             className={`game-tab${activeGame === 'card-guesser' ? ' game-tab--active' : ''}`}
             onClick={() => setActiveGame('card-guesser')}
           >
@@ -53,8 +60,12 @@ export default function App() {
         </nav>
       </header>
 
-      {status === 'loading' && <p className="status-message">Loading cards…</p>}
-      {status === 'failed' && (
+      {activeGame === 'home' && (
+        <Homepage onPlay={(game) => setActiveGame(game)} />
+      )}
+
+      {activeGame !== 'home' && status === 'loading' && <p className="status-message">Loading cards…</p>}
+      {activeGame !== 'home' && status === 'failed' && (
         <p className="status-message status-message--error">Failed to load cards.</p>
       )}
 

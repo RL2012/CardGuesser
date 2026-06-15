@@ -1,7 +1,9 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAppDispatch, useAppSelector } from '../../hooks'
 import { startGame, pickCard, nextRound, resetGame } from '../../store/higherOrLowerSlice'
 import { getRandomCard } from '../../utils'
+import ScoreEntry from '../ScoreEntry'
+import { addScore } from '../../leaderboard'
 import type { Card } from '../../types'
 
 function getRandomPair(monsterCards: Card[]): [Card, Card] {
@@ -15,6 +17,7 @@ export default function HigherOrLower() {
   const { cards } = useAppSelector((s) => s.cards)
   const { leftCard, rightCard, lives, score, streak, phase, lastWinner, playerChoice, lastPointsEarned, totalRounds, correctAnswers } =
     useAppSelector((s) => s.higherOrLower)
+  const [scoreEntrySeen, setScoreEntrySeen] = useState(false)
 
   const monsterCards = useMemo(() => cards.filter((c) => c.atk !== null), [cards])
 
@@ -35,7 +38,13 @@ export default function HigherOrLower() {
   }
 
   const handleReset = () => {
+    setScoreEntrySeen(false)
     dispatch(resetGame())
+  }
+
+  const handleScoreSubmit = (name: string) => {
+    addScore('higherOrLower', name, score)
+    setScoreEntrySeen(true)
   }
 
   if (phase === 'idle' || !leftCard || !rightCard) {
@@ -43,6 +52,16 @@ export default function HigherOrLower() {
   }
 
   if (phase === 'gameover') {
+    if (!scoreEntrySeen) {
+      return (
+        <ScoreEntry
+          score={score}
+          onSubmit={handleScoreSubmit}
+          onSkip={() => setScoreEntrySeen(true)}
+        />
+      )
+    }
+
     const leftWon = lastWinner === 'left' || lastWinner === 'tie'
     const rightWon = lastWinner === 'right' || lastWinner === 'tie'
     return (

@@ -1,18 +1,23 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAppDispatch, useAppSelector } from '../../hooks'
 import { startRound, correctGuess, replaceCard, skipCard, tickSecond, addWrongGuess } from '../../store/gameSlice'
 import { getRandomCard, randomCrop } from '../../utils'
 import CardDisplay from './CardDisplay'
 import CardSearch from './CardSearch'
 import PreviousRounds from './PreviousRounds'
+import ScoreEntry from '../ScoreEntry'
+import { addScore } from '../../leaderboard'
 import type { Card } from '../../types'
 
 export default function CardGuesser() {
   const dispatch = useAppDispatch()
   const { cards } = useAppSelector((s) => s.cards)
-  const { currentCard, isActive, cardTimeLeft, previousRounds, wrongGuesses } = useAppSelector(
+  const { currentCard, isActive, cardTimeLeft, challengeTimeLeft, previousRounds, wrongGuesses, totalPoints } = useAppSelector(
     (s) => s.game,
   )
+  const [scoreEntrySeen, setScoreEntrySeen] = useState(false)
+
+  const isGameOver = !isActive && challengeTimeLeft === 0
 
   const nextCardRef = useRef<Card | null>(null)
 
@@ -83,26 +88,40 @@ export default function CardGuesser() {
     dispatch(replaceCard({ card: takeNextCard(currentCard), ...randomCrop() }))
   }
 
+  const handleScoreSubmit = (name: string) => {
+    addScore('cardGuesser', name, totalPoints)
+    setScoreEntrySeen(true)
+  }
+
   return (
-    <main className="app-main">
-      <CardDisplay onSkip={handleSkip} onReplace={handleReplace} />
-      <div className="game-panel">
-        <CardSearch
-          cardNames={cards.map((c) => c.name)}
-          onGuess={handleGuess}
-          disabled={!isActive}
+    <>
+      <main className="app-main">
+        <CardDisplay onSkip={handleSkip} onReplace={handleReplace} />
+        <div className="game-panel">
+          <CardSearch
+            cardNames={cards.map((c) => c.name)}
+            onGuess={handleGuess}
+            disabled={!isActive}
+          />
+          {wrongGuesses.length > 0 && (
+            <ul className="wrong-guesses">
+              {wrongGuesses.map((name) => (
+                <li key={name} className="wrong-guess-item">
+                  {name}
+                </li>
+              ))}
+            </ul>
+          )}
+          <PreviousRounds rounds={previousRounds} />
+        </div>
+      </main>
+      {isGameOver && !scoreEntrySeen && (
+        <ScoreEntry
+          score={totalPoints}
+          onSubmit={handleScoreSubmit}
+          onSkip={() => setScoreEntrySeen(true)}
         />
-        {wrongGuesses.length > 0 && (
-          <ul className="wrong-guesses">
-            {wrongGuesses.map((name) => (
-              <li key={name} className="wrong-guess-item">
-                {name}
-              </li>
-            ))}
-          </ul>
-        )}
-        <PreviousRounds rounds={previousRounds} />
-      </div>
-    </main>
+      )}
+    </>
   )
 }
