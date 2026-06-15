@@ -94,7 +94,7 @@ function mapYgoCard(c: YgoCard): Card {
     attribute: c.attribute ?? '',
     atk: c.atk ?? null,
     def: c.def ?? null,
-    level: c.level ?? c.linkval ?? null,
+    level: c.frameType === 'link' ? (c.linkval ?? null) : (c.level ?? null),
     race: c.race ?? '',
     archetype: c.archetype ?? null,
     cardSets: (c.card_sets ?? []).map((s) => ({

@@ -21,6 +21,7 @@ export interface Category {
   cardType?: string
   archetype?: string
   level?: number
+  isLink?: boolean
   setName?: string
   banStatus?: string
   releaseYear?: number
@@ -79,8 +80,8 @@ export function cardMatchesCategory(card: Card, cat: Category): boolean {
     case 'attribute-type':     return card.attribute === cat.attribute && card.type === cat.cardType
     case 'archetype-type':     return card.archetype === cat.archetype && card.type === cat.cardType
     case 'archetype':          return card.archetype === cat.archetype
-    case 'level-race':         return card.level === cat.level && card.race === cat.race
-    case 'level-attribute':    return card.level === cat.level && card.attribute === cat.attribute
+    case 'level-race':         return card.level === cat.level && card.race === cat.race && (cat.isLink ? card.frameType === 'link' : card.frameType !== 'link')
+    case 'level-attribute':    return card.level === cat.level && card.attribute === cat.attribute && (cat.isLink ? card.frameType === 'link' : card.frameType !== 'link')
     case 'level-type':         return card.level === cat.level && card.type === cat.cardType
     case 'card-set':           return card.cardSets.some(s => s.setName === cat.setName)
     case 'ban-type':           return card.banTcg === cat.banStatus && card.type === cat.cardType
@@ -189,33 +190,37 @@ function tryGenerate(cards: Card[], template: CategoryTemplate): Category | null
   }
 
   if (template === 'level-race') {
-    type Combo = { level: number; race: string; count: number }
+    type Combo = { level: number; race: string; count: number; isLink: boolean }
     const map = new Map<string, Combo>()
     for (const c of monsters) {
       if (c.level === null || !c.race) continue
-      const key = `${c.level}|${c.race}`
-      const cur = map.get(key) ?? { level: c.level, race: c.race, count: 0 }
+      const isLink = c.frameType === 'link'
+      const key = `${c.level}|${c.race}|${isLink}`
+      const cur = map.get(key) ?? { level: c.level, race: c.race, count: 0, isLink }
       map.set(key, { ...cur, count: cur.count + 1 })
     }
     const valid = [...map.values()].filter(v => v.count >= MIN_CARDS)
     if (!valid.length) return null
     const pick = pickRandom(valid)
-    return { template, label: `Level ${pick.level} ${pick.race}s`, level: pick.level, race: pick.race }
+    const prefix = pick.isLink ? 'Link Rating' : 'Level'
+    return { template, label: `${prefix} ${pick.level} ${pick.race}s`, level: pick.level, race: pick.race, isLink: pick.isLink }
   }
 
   if (template === 'level-attribute') {
-    type Combo = { level: number; attribute: string; count: number }
+    type Combo = { level: number; attribute: string; count: number; isLink: boolean }
     const map = new Map<string, Combo>()
     for (const c of monsters) {
       if (c.level === null || !c.attribute) continue
-      const key = `${c.level}|${c.attribute}`
-      const cur = map.get(key) ?? { level: c.level, attribute: c.attribute, count: 0 }
+      const isLink = c.frameType === 'link'
+      const key = `${c.level}|${c.attribute}|${isLink}`
+      const cur = map.get(key) ?? { level: c.level, attribute: c.attribute, count: 0, isLink }
       map.set(key, { ...cur, count: cur.count + 1 })
     }
     const valid = [...map.values()].filter(v => v.count >= MIN_CARDS)
     if (!valid.length) return null
     const pick = pickRandom(valid)
-    return { template, label: `Level ${pick.level} ${pick.attribute} monsters`, level: pick.level, attribute: pick.attribute }
+    const prefix = pick.isLink ? 'Link Rating' : 'Level'
+    return { template, label: `${prefix} ${pick.level} ${pick.attribute} monsters`, level: pick.level, attribute: pick.attribute, isLink: pick.isLink }
   }
 
   if (template === 'level-type') {
@@ -230,7 +235,8 @@ function tryGenerate(cards: Card[], template: CategoryTemplate): Category | null
     const valid = [...map.values()].filter(v => v.count >= MIN_CARDS)
     if (!valid.length) return null
     const pick = pickRandom(valid)
-    return { template, label: `Level ${pick.level} ${pick.cardType}s`, level: pick.level, cardType: pick.cardType }
+    const levelLabel = pick.cardType.toLowerCase().includes('link') ? 'Link Rating' : 'Level'
+    return { template, label: `${levelLabel} ${pick.level} ${pick.cardType}s`, level: pick.level, cardType: pick.cardType }
   }
 
   if (template === 'card-set') {

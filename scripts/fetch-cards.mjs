@@ -31,7 +31,7 @@ const lines = data.map((c) => {
     c.attribute ?? '',
     c.atk ?? '',
     c.def ?? '',
-    c.level ?? c.linkval ?? '',
+    c.frameType === 'link' ? (c.linkval ?? '') : (c.level ?? ''),
     c.race ?? '',
     c.archetype ?? '',
     JSON.stringify(sets),

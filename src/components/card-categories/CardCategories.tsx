@@ -1,4 +1,4 @@
-import { useRef, useState, useMemo, useCallback, useEffect } from 'react'
+import { useRef, useState, useMemo, useCallback, useEffect, type ReactElement } from 'react'
 import Peer from 'peerjs'
 import type { DataConnection } from 'peerjs'
 import Fuse from 'fuse.js'
@@ -40,6 +40,7 @@ interface GameState {
   usedCardIds: number[]
   winner: string | null
   wrongFlash: string | null
+  wrongCard: { cardId: number; cardName: string } | null
 }
 
 const INIT_GAME_STATE: GameState = {
@@ -54,6 +55,7 @@ const INIT_GAME_STATE: GameState = {
   usedCardIds: [],
   winner: null,
   wrongFlash: null,
+  wrongCard: null,
 }
 
 type LobbyPhase = 'setup' | 'name-entry' | 'lobby' | 'room' | 'game'
@@ -88,7 +90,7 @@ export default function CardCategories() {
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
-  const searchDropdownRect = useRef<DOMRect | null>(null)
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null)
 
   // Refs for stable access inside event handlers
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -129,6 +131,23 @@ export default function CardCategories() {
     return () => clearTimeout(id)
   }, [searchQuery])
 
+  const measureDropdown = useCallback(() => {
+    if (!searchInputRef.current) return
+    const r = searchInputRef.current.getBoundingClientRect()
+    setDropdownPos({ top: r.bottom + 2, left: r.left, width: r.width })
+  }, [])
+
+  useEffect(() => {
+    if (!searchOpen) return
+    measureDropdown()
+    window.addEventListener('scroll', measureDropdown, true)
+    window.addEventListener('resize', measureDropdown)
+    return () => {
+      window.removeEventListener('scroll', measureDropdown, true)
+      window.removeEventListener('resize', measureDropdown)
+    }
+  }, [searchOpen, measureDropdown])
+
   // Monsters only — spells/traps are never valid answers for any category
   const fuse = useMemo(
     () =>
@@ -149,7 +168,9 @@ export default function CardCategories() {
     const cat = gameState.selectedCategory
     if (cat?.archetype) {
       const norm = (s: string) => s.toLowerCase().replace(/[\s\-']/g, '')
-      if (norm(debouncedQuery).includes(norm(cat.archetype))) return []
+      const normQuery = norm(debouncedQuery)
+      const normArch = norm(cat.archetype)
+      if (normQuery.includes(normArch) || normArch.startsWith(normQuery)) return []
     }
     const used = new Set(gameState.usedCardIds)
     return fuse
@@ -223,6 +244,7 @@ export default function CardCategories() {
         currentGuesserIdx: 0,
         lives: msg.lives,
         wrongFlash: null,
+        wrongCard: null,
         winner: null,
       }
     } else if (msg.type === 'guessing-start') {
@@ -251,12 +273,17 @@ export default function CardCategories() {
       setSearchQuery('')
       setSearchOpen(false)
     } else if (msg.type === 'guess-wrong') {
-      next = { ...next, lives: msg.lives, wrongFlash: msg.guesser }
+      next = {
+        ...next,
+        lives: msg.lives,
+        wrongFlash: msg.guesser,
+        wrongCard: msg.cardId != null ? { cardId: msg.cardId, cardName: msg.cardName ?? '' } : null,
+      }
       setSearchQuery('')
       setSearchOpen(false)
       setTimeout(() => {
-        setGameState((gs) => ({ ...gs, wrongFlash: null }))
-        gameStateRef.current = { ...gameStateRef.current, wrongFlash: null }
+        setGameState((gs) => ({ ...gs, wrongFlash: null, wrongCard: null }))
+        gameStateRef.current = { ...gameStateRef.current, wrongFlash: null, wrongCard: null }
       }, 1800)
     } else if (msg.type === 'game-over') {
       next = { ...next, phase: 'game-over', winner: msg.winner }
@@ -339,14 +366,16 @@ export default function CardCategories() {
     const hg = hostGameRef.current
     if (gs.phase !== 'guessing' || !gs.selectedCategory) return
     if (!isSoloRef.current && hg.guesserOrder[hg.guesserIdx] !== guesserPeerId) return
+
+    const card = cardsRef.current.find((c) => c.id === cardId)
+
     if (hg.usedCardIds.has(cardId)) {
-      hostHandleWrong(guesserPeerId)
+      hostHandleWrong(guesserPeerId, cardId, card?.name ?? null)
       return
     }
 
-    const card = cardsRef.current.find((c) => c.id === cardId)
     if (!card || !cardMatchesCategory(card, gs.selectedCategory)) {
-      hostHandleWrong(guesserPeerId)
+      hostHandleWrong(guesserPeerId, card ? cardId : null, card?.name ?? null)
       return
     }
 
@@ -362,7 +391,7 @@ export default function CardCategories() {
     })
 
     // Solo: 3 correct guesses in a row = round won, award a point
-    if (isSoloRef.current && gameStateRef.current.correctGuesses.length >= 3) {
+    if (isSoloRef.current && gameStateRef.current.correctGuesses.length === 3) {
       setSoloRoundWon(true)
       setTimeout(() => {
         setSoloRoundWon(false)
@@ -372,7 +401,7 @@ export default function CardCategories() {
     }
   }
 
-  function hostHandleWrong(guesserPeerId: string) {
+  function hostHandleWrong(guesserPeerId: string, cardId: number | null = null, cardName: string | null = null) {
     const hg = hostGameRef.current
     const gs = gameStateRef.current
     const curLives = (gs.lives[guesserPeerId] ?? 1) - 1
@@ -385,7 +414,7 @@ export default function CardCategories() {
       hg.leaderQueue = hg.leaderQueue.filter((id) => id !== guesserPeerId)
     }
 
-    broadcastGame({ type: 'guess-wrong', guesser: guesserPeerId, lives: newLives, eliminated })
+    broadcastGame({ type: 'guess-wrong', guesser: guesserPeerId, lives: newLives, eliminated, cardId, cardName })
 
     const active = hg.activePlayers
     const isGameOver = isSoloRef.current ? curLives <= 0 : active.length <= 1
@@ -641,7 +670,7 @@ export default function CardCategories() {
   }
 
   const handlePickCategory = (idx: number) => {
-    if (isHostRef.current || isSoloRef.current) hostPickCategory(idx)
+    if (isHostRef.current) hostPickCategory(idx)
     else hostConnRef.current?.send({ type: 'pick-category', idx } satisfies ToHostMsg)
   }
 
@@ -903,21 +932,26 @@ export default function CardCategories() {
 
   // ── Game phase ────────────────────────────────────────────────────────────────
 
-  if (gs.phase === 'game-over') {
-    if (isSolo && !scoreEntrySeen) {
-      return (
-        <ScoreEntry
-          score={soloScore}
-          onSubmit={(n) => {
-            addScore('cardCategories', n, soloScore)
-            setScoreEntrySeen(true)
-          }}
-          onSkip={() => setScoreEntrySeen(true)}
-        />
-      )
-    }
-    const winnerName = gs.winner ? playerNameForRender(gs.winner) : null
+  // Solo score entry is full-screen; no chat needed
+  if (gs.phase === 'game-over' && isSolo && !scoreEntrySeen) {
     return (
+      <ScoreEntry
+        score={soloScore}
+        onSubmit={(n) => {
+          addScore('cardCategories', n, soloScore)
+          setScoreEntrySeen(true)
+        }}
+        onSkip={() => setScoreEntrySeen(true)}
+      />
+    )
+  }
+
+  // Build sub-phase content so we can wrap it with the chat sidebar in one return
+  let gameContent: ReactElement
+
+  if (gs.phase === 'game-over') {
+    const winnerName = gs.winner ? playerNameForRender(gs.winner) : null
+    gameContent = (
       <div className="cc-gameover">
         <h2 className="cc-gameover__title">Game Over!</h2>
         {winnerName ? (
@@ -943,10 +977,8 @@ export default function CardCategories() {
         </button>
       </div>
     )
-  }
-
-  if (gs.phase === 'category-selection') {
-    return (
+  } else if (gs.phase === 'category-selection') {
+    gameContent = (
       <div className="cc-category-phase">
         <div className="cc-lives-bar">
           {allPlayers.map((p) => (
@@ -981,17 +1013,16 @@ export default function CardCategories() {
         </div>
       </div>
     )
-  }
+  } else {
+    // Guessing phase
+    const guessesByPlayer = new Map<string, GuessRecord[]>()
+    for (const p of allPlayers)
+      guessesByPlayer.set(
+        p.peerId,
+        gs.correctGuesses.filter((g) => g.peerId === p.peerId),
+      )
 
-  // Guessing phase
-  const guessesByPlayer = new Map<string, GuessRecord[]>()
-  for (const p of allPlayers)
-    guessesByPlayer.set(
-      p.peerId,
-      gs.correctGuesses.filter((g) => g.peerId === p.peerId),
-    )
-
-  return (
+    gameContent = (
     <div className="cc-game">
       <div className="cc-game__header">
         <p className="cc-game__category-label">{gs.selectedCategory?.label ?? ''}</p>
@@ -1012,10 +1043,22 @@ export default function CardCategories() {
 
       {!soloRoundWon && gs.wrongFlash && (
         <div className="cc-wrong-flash">
-          ✕ {isSolo ? 'Wrong!' : `${playerNameForRender(gs.wrongFlash)} guessed wrong`}
-          {' — '}
-          {gs.lives[gs.wrongFlash] ?? 0} {(gs.lives[gs.wrongFlash] ?? 0) === 1 ? 'life' : 'lives'}{' '}
-          left
+          <div className="cc-wrong-flash__text">
+            ✕ {isSolo ? 'Wrong!' : `${playerNameForRender(gs.wrongFlash)} guessed wrong`}
+            {' — '}
+            {gs.lives[gs.wrongFlash] ?? 0} {(gs.lives[gs.wrongFlash] ?? 0) === 1 ? 'life' : 'lives'}{' '}
+            left
+          </div>
+          {gs.wrongCard && (
+            <div className="cc-wrong-flash__card">
+              <img
+                src={`https://images.ygoprodeck.com/images/cards_cropped/${gs.wrongCard.cardId}.jpg`}
+                alt={gs.wrongCard.cardName}
+                className="cc-wrong-flash__card-img"
+              />
+              <span className="cc-wrong-flash__card-name">{gs.wrongCard.cardName}</span>
+            </div>
+          )}
         </div>
       )}
 
@@ -1024,7 +1067,7 @@ export default function CardCategories() {
         {allPlayers.map((p) => {
           const isMyCol = isSolo || p.peerId === myPeerId
           const isCurrentGuesser = isSolo || p.peerId === currentGuesserPeerId
-          const showSearch = isCurrentGuesser && isMyCol && iAmGuesser
+          const showSearch = isCurrentGuesser && isMyCol && iAmGuesser && !soloRoundWon
           const guesses = guessesByPlayer.get(p.peerId) ?? []
           const isDead = (gs.lives[p.peerId] ?? MAX_LIVES) <= 0
           return (
@@ -1036,6 +1079,47 @@ export default function CardCategories() {
                 <div className="cc-player-col__name">{playerNameForRender(p.peerId)}</div>
                 {renderLives(p.peerId)}
               </div>
+              {showSearch && (
+                <div className="cc-player-col__search">
+                  <div className="card-search">
+                    <input
+                      ref={searchInputRef}
+                      className="card-search-input"
+                      placeholder="Search for a card…"
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value)
+                        if (e.target.value.length >= 2) setSearchOpen(true)
+                      }}
+                      onFocus={() => setSearchOpen(true)}
+                      onBlur={() => setTimeout(() => setSearchOpen(false), 150)}
+                      autoFocus
+                      autoComplete="off"
+                    />
+                    {searchOpen && searchResults.length > 0 && dropdownPos && (
+                      <ul
+                        className="search-dropdown"
+                        style={{ position: 'fixed', ...dropdownPos }}
+                      >
+                        {searchResults.map((card) => (
+                          <li
+                            key={card.id}
+                            className="search-dropdown-item"
+                            onMouseDown={() => handleSubmitGuess(card.id)}
+                          >
+                            <img
+                              src={`https://images.ygoprodeck.com/images/cards_cropped/${card.id}.jpg`}
+                              alt=""
+                              className="search-dropdown-item__img"
+                            />
+                            {card.name}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              )}
               <div className="cc-player-col__guesses">
                 {guesses.map((g) => (
                   <div key={g.cardId} className="cc-guess-item">
@@ -1048,61 +1132,49 @@ export default function CardCategories() {
                   </div>
                 ))}
               </div>
-              {showSearch && (
-                <div className="cc-player-col__search">
-                  <div className="card-search">
-                    <input
-                      ref={searchInputRef}
-                      className="card-search-input"
-                      placeholder="Search for a card…"
-                      value={searchQuery}
-                      onChange={(e) => {
-                        setSearchQuery(e.target.value)
-                        if (e.target.value.length >= 2) {
-                          if (searchInputRef.current)
-                            searchDropdownRect.current =
-                              searchInputRef.current.getBoundingClientRect()
-                          setSearchOpen(true)
-                        }
-                      }}
-                      onFocus={() => {
-                        if (searchInputRef.current)
-                          searchDropdownRect.current =
-                            searchInputRef.current.getBoundingClientRect()
-                        setSearchOpen(true)
-                      }}
-                      onBlur={() => setTimeout(() => setSearchOpen(false), 150)}
-                      autoFocus
-                      autoComplete="off"
-                    />
-                    {searchOpen && searchResults.length > 0 && searchDropdownRect.current && (
-                      <ul
-                        className="search-dropdown"
-                        style={{
-                          position: 'fixed',
-                          bottom: window.innerHeight - searchDropdownRect.current.top + 2,
-                          left: searchDropdownRect.current.left,
-                          width: searchDropdownRect.current.width,
-                        }}
-                      >
-                        {searchResults.map((card) => (
-                          <li
-                            key={card.id}
-                            className="search-dropdown-item"
-                            onMouseDown={() => handleSubmitGuess(card.id)}
-                          >
-                            {card.name}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
           )
         })}
       </div>
+    </div>
+    )
+  }
+
+  return (
+    <div className="cc-game-layout">
+      <div className="cc-game-main">{gameContent}</div>
+      {!isSolo && (
+        <div className="pvp-chat">
+          <div className="pvp-chat__messages">
+            {chatMessages.map((m) =>
+              m.name ? (
+                <div key={m.id} className={`pvp-chat__msg${m.self ? ' pvp-chat__msg--self' : ''}`}>
+                  <span className="pvp-chat__msg-name">{m.name}</span>
+                  <span className="pvp-chat__msg-text">{m.text}</span>
+                </div>
+              ) : (
+                <div key={m.id} className="pvp-chat__msg pvp-chat__msg--system">
+                  {m.text}
+                </div>
+              ),
+            )}
+            <div ref={chatEndRef} />
+          </div>
+          <form className="pvp-chat__input-row" onSubmit={handleSendChat}>
+            <input
+              className="pvp-chat__input"
+              type="text"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              placeholder="Say something…"
+              maxLength={200}
+            />
+            <button className="pvp-lobby__copy-btn" type="submit" disabled={!chatInput.trim()}>
+              Send
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   )
 }
