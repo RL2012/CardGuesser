@@ -7,6 +7,7 @@ export interface LeaderboardEntry {
 const KEYS = {
   cardGuesser: 'lb_card_guesser',
   higherOrLower: 'lb_higher_or_lower',
+  cardCategories: 'lb_card_categories',
 } as const
 
 export type GameKey = keyof typeof KEYS

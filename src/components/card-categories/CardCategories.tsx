@@ -3,8 +3,12 @@ import Peer from 'peerjs'
 import type { DataConnection } from 'peerjs'
 import Fuse from 'fuse.js'
 import { useAppSelector } from '../../hooks'
+import ScoreEntry from '../ScoreEntry'
+import { addScore } from '../../leaderboard'
 import { generateCategories, cardMatchesCategory } from './categoryUtils'
 import type { Category, GuessRecord } from './categoryUtils'
+import { createLocalPeer } from './LocalTransport'
+import type { LocalConnection } from './LocalTransport'
 import {
   ICE_SERVERS,
   MAX_PLAYERS,
@@ -13,6 +17,9 @@ import {
   type ToHostMsg,
   type ToClientMsg,
 } from './network'
+
+// Union type so wireClientConn / wireHostConn accept either transport
+type AnyDataConnection = DataConnection | LocalConnection
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -49,14 +56,14 @@ const INIT_GAME_STATE: GameState = {
   wrongFlash: null,
 }
 
-type LobbyPhase = 'setup' | 'mode-select' | 'lobby' | 'room' | 'game'
+type LobbyPhase = 'setup' | 'name-entry' | 'lobby' | 'room' | 'game'
 
 let chatIdSeq = 0
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function CardCategories() {
-  const { cards } = useAppSelector(s => s.cards)
+  const { cards } = useAppSelector((s) => s.cards)
 
   // Lobby / connection state
   const [name, setName] = useState('')
@@ -76,6 +83,7 @@ export default function CardCategories() {
   const [gameState, setGameState] = useState<GameState>(INIT_GAME_STATE)
   const [soloScore, setSoloScore] = useState(0)
   const [soloRoundWon, setSoloRoundWon] = useState(false)
+  const [scoreEntrySeen, setScoreEntrySeen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
@@ -83,13 +91,22 @@ export default function CardCategories() {
   const searchDropdownRect = useRef<DOMRect | null>(null)
 
   // Refs for stable access inside event handlers
-  const peerRef = useRef<Peer | null>(null)
+  const peerRef = useRef<
+    | Peer
+    | {
+        id: string
+        on: (e: string, cb: (...a: unknown[]) => void) => void
+        connect: (id: string) => AnyDataConnection
+        destroy: () => void
+      }
+    | null
+  >(null)
   const myNameRef = useRef('')
   const myPeerIdRef = useRef('')
   const isHostRef = useRef(false)
   const isSoloRef = useRef(false)
-  const clientConnsRef = useRef<Map<string, DataConnection>>(new Map())
-  const hostConnRef = useRef<DataConnection | null>(null)
+  const clientConnsRef = useRef<Map<string, AnyDataConnection>>(new Map())
+  const hostConnRef = useRef<AnyDataConnection | null>(null)
   const playersRef = useRef<PlayerInfo[]>([])
   const chatEndRef = useRef<HTMLDivElement | null>(null)
   const cardsRef = useRef(cards)
@@ -98,7 +115,9 @@ export default function CardCategories() {
   cardsRef.current = cards
 
   // Scroll chat to bottom
-  const scrollChat = () => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }
+  const scrollChat = () => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
 
   // Host-only authoritative game data
   const hostGameRef = useRef({
@@ -117,9 +136,19 @@ export default function CardCategories() {
   }, [searchQuery])
 
   // Monsters only — spells/traps are never valid answers for any category
-  const fuse = useMemo(() => new Fuse(cards.filter(c => c.atk !== null), {
-    keys: ['name'], threshold: 0.35, minMatchCharLength: 2, distance: 200,
-  }), [cards])
+  const fuse = useMemo(
+    () =>
+      new Fuse(
+        cards.filter((c) => c.atk !== null),
+        {
+          keys: ['name'],
+          threshold: 0.35,
+          minMatchCharLength: 2,
+          distance: 200,
+        },
+      ),
+    [cards],
+  )
 
   const searchResults = useMemo(() => {
     if (debouncedQuery.length < 2) return []
@@ -129,36 +158,45 @@ export default function CardCategories() {
       if (norm(debouncedQuery).includes(norm(cat.archetype))) return []
     }
     const used = new Set(gameStateRef.current.usedCardIds)
-    return fuse.search(debouncedQuery, { limit: 10 }).map(r => r.item).filter(c => !used.has(c.id))
+    return fuse
+      .search(debouncedQuery, { limit: 10 })
+      .map((r) => r.item)
+      .filter((c) => !used.has(c.id))
   }, [fuse, debouncedQuery, gameState.selectedCategory])
 
   // ── Player helpers ────────────────────────────────────────────────────────────
 
   function playerName(peerId: string): string {
     if (peerId === myPeerIdRef.current) return myNameRef.current
-    return playersRef.current.find(p => p.peerId === peerId)?.name ?? peerId.slice(0, 6)
+    return playersRef.current.find((p) => p.peerId === peerId)?.name ?? peerId.slice(0, 6)
   }
 
   function addPlayer(info: PlayerInfo) {
-    if (playersRef.current.some(p => p.peerId === info.peerId)) return
+    if (playersRef.current.some((p) => p.peerId === info.peerId)) return
     playersRef.current = [...playersRef.current, info]
     setPlayers([...playersRef.current])
   }
 
   function removePlayer(peerId: string) {
-    playersRef.current = playersRef.current.filter(p => p.peerId !== peerId)
+    playersRef.current = playersRef.current.filter((p) => p.peerId !== peerId)
     setPlayers([...playersRef.current])
   }
 
   function addChat(msg: Omit<ChatMessage, 'id'>) {
-    setChatMessages(prev => { const next = [...prev, { ...msg, id: chatIdSeq++ }]; scrollChat(); return next })
+    setChatMessages((prev) => {
+      const next = [...prev, { ...msg, id: chatIdSeq++ }]
+      scrollChat()
+      return next
+    })
   }
 
   // ── Network helpers (no-ops in solo mode) ─────────────────────────────────────
 
   function broadcast(msg: ToClientMsg, skipPeerId?: string) {
     if (isSoloRef.current) return
-    clientConnsRef.current.forEach((conn, id) => { if (id !== skipPeerId) conn.send(msg) })
+    clientConnsRef.current.forEach((conn, id) => {
+      if (id !== skipPeerId) conn.send(msg)
+    })
   }
 
   // Send to all clients + apply to host's own state
@@ -193,11 +231,21 @@ export default function CardCategories() {
         winner: null,
       }
     } else if (msg.type === 'guessing-start') {
-      next = { ...next, phase: 'guessing', selectedCategory: msg.category, guesserOrder: msg.guesserOrder, currentGuesserIdx: 0 }
+      next = {
+        ...next,
+        phase: 'guessing',
+        selectedCategory: msg.category,
+        guesserOrder: msg.guesserOrder,
+        currentGuesserIdx: 0,
+      }
       setSearchQuery('')
       setSearchOpen(false)
     } else if (msg.type === 'guess-correct') {
-      const newGuess: GuessRecord = { peerId: msg.guesser, cardId: msg.cardId, cardName: msg.cardName }
+      const newGuess: GuessRecord = {
+        peerId: msg.guesser,
+        cardId: msg.cardId,
+        cardName: msg.cardName,
+      }
       next = {
         ...next,
         correctGuesses: [...next.correctGuesses, newGuess],
@@ -212,7 +260,7 @@ export default function CardCategories() {
       setSearchQuery('')
       setSearchOpen(false)
       setTimeout(() => {
-        setGameState(gs => ({ ...gs, wrongFlash: null }))
+        setGameState((gs) => ({ ...gs, wrongFlash: null }))
         gameStateRef.current = { ...gameStateRef.current, wrongFlash: null }
       }, 1800)
     } else if (msg.type === 'game-over') {
@@ -228,8 +276,8 @@ export default function CardCategories() {
   // ── Host game logic (shared by solo + multiplayer) ────────────────────────────
 
   function hostStartGame() {
-    const allIds = [myPeerIdRef.current, ...playersRef.current.map(p => p.peerId)]
-    const lives = Object.fromEntries(allIds.map(id => [id, MAX_LIVES]))
+    const allIds = [myPeerIdRef.current, ...playersRef.current.map((p) => p.peerId)]
+    const lives = Object.fromEntries(allIds.map((id) => [id, MAX_LIVES]))
     hostGameRef.current = {
       activePlayers: [...allIds],
       leaderQueue: [...allIds].sort(() => Math.random() - 0.5),
@@ -261,7 +309,10 @@ export default function CardCategories() {
     let leader: string | undefined
     while (hg.leaderQueue.length > 0) {
       const candidate = hg.leaderQueue.shift()!
-      if (active.includes(candidate)) { leader = candidate; break }
+      if (active.includes(candidate)) {
+        leader = candidate
+        break
+      }
     }
     if (!leader) leader = active[Math.floor(Math.random() * active.length)]
 
@@ -291,9 +342,12 @@ export default function CardCategories() {
     const hg = hostGameRef.current
     if (gs.phase !== 'guessing' || !gs.selectedCategory) return
     if (!isSoloRef.current && hg.guesserOrder[hg.guesserIdx] !== guesserPeerId) return
-    if (hg.usedCardIds.has(cardId)) { hostHandleWrong(guesserPeerId); return }
+    if (hg.usedCardIds.has(cardId)) {
+      hostHandleWrong(guesserPeerId)
+      return
+    }
 
-    const card = cardsRef.current.find(c => c.id === cardId)
+    const card = cardsRef.current.find((c) => c.id === cardId)
     if (!card || !cardMatchesCategory(card, gs.selectedCategory)) {
       hostHandleWrong(guesserPeerId)
       return
@@ -302,14 +356,20 @@ export default function CardCategories() {
     hg.usedCardIds.add(cardId)
     const nextIdx = isSoloRef.current ? 0 : (hg.guesserIdx + 1) % hg.guesserOrder.length
     hg.guesserIdx = nextIdx
-    broadcastGame({ type: 'guess-correct', guesser: guesserPeerId, cardId, cardName: card.name, nextGuesserIdx: nextIdx })
+    broadcastGame({
+      type: 'guess-correct',
+      guesser: guesserPeerId,
+      cardId,
+      cardName: card.name,
+      nextGuesserIdx: nextIdx,
+    })
 
     // Solo: 3 correct guesses in a row = round won, award a point
     if (isSoloRef.current && gameStateRef.current.correctGuesses.length >= 3) {
       setSoloRoundWon(true)
       setTimeout(() => {
         setSoloRoundWon(false)
-        setSoloScore(s => s + 1)
+        setSoloScore((s) => s + 1)
         soloStartNewRound()
       }, 1500)
     }
@@ -324,8 +384,8 @@ export default function CardCategories() {
     let eliminated: string | null = null
     if (curLives <= 0) {
       eliminated = guesserPeerId
-      hg.activePlayers = hg.activePlayers.filter(id => id !== guesserPeerId)
-      hg.leaderQueue = hg.leaderQueue.filter(id => id !== guesserPeerId)
+      hg.activePlayers = hg.activePlayers.filter((id) => id !== guesserPeerId)
+      hg.leaderQueue = hg.leaderQueue.filter((id) => id !== guesserPeerId)
     }
 
     broadcastGame({ type: 'guess-wrong', guesser: guesserPeerId, lives: newLives, eliminated })
@@ -368,8 +428,8 @@ export default function CardCategories() {
     setSearchOpen(false)
   }
 
-  function startSolo(playerName: string) {
-    myNameRef.current = playerName
+  function startSolo() {
+    myNameRef.current = 'You'
     myPeerIdRef.current = LOCAL_PEER_ID
     isHostRef.current = true
     isSoloRef.current = true
@@ -378,6 +438,7 @@ export default function CardCategories() {
     setIsSolo(true)
     setSoloScore(0)
     setSoloRoundWon(false)
+    setScoreEntrySeen(false)
     playersRef.current = []
     setPlayers([])
 
@@ -388,22 +449,29 @@ export default function CardCategories() {
       guesserIdx: 0,
       usedCardIds: new Set(),
     }
-    gameStateRef.current = { ...INIT_GAME_STATE, lives: { [LOCAL_PEER_ID]: MAX_LIVES }, guesserOrder: [LOCAL_PEER_ID] }
+    gameStateRef.current = {
+      ...INIT_GAME_STATE,
+      lives: { [LOCAL_PEER_ID]: MAX_LIVES },
+      guesserOrder: [LOCAL_PEER_ID],
+    }
     setLobbyPhase('game')
     soloStartNewRound()
   }
 
   // ── Network wiring (multiplayer only) ─────────────────────────────────────────
 
-  const wireClientConn = useCallback((conn: DataConnection) => {
+  const wireClientConn = useCallback((conn: AnyDataConnection) => {
     clientConnsRef.current.set(conn.peer, conn)
 
-    conn.on('data', raw => {
+    conn.on('data', (raw) => {
       const msg = raw as ToHostMsg
 
       if (msg.type === 'hello') {
         const hostInfo: PlayerInfo = { peerId: myPeerIdRef.current, name: myNameRef.current }
-        conn.send({ type: 'player-list', players: [hostInfo, ...playersRef.current] } satisfies ToClientMsg)
+        conn.send({
+          type: 'player-list',
+          players: [hostInfo, ...playersRef.current],
+        } satisfies ToClientMsg)
         const player: PlayerInfo = { peerId: msg.peerId, name: msg.name }
         addPlayer(player)
         broadcast({ type: 'player-joined', player } satisfies ToClientMsg, conn.peer)
@@ -415,62 +483,100 @@ export default function CardCategories() {
       }
       if (msg.type === 'pick-category') {
         const gs = gameStateRef.current
-        if (gs.phase === 'category-selection' && gs.currentLeader === conn.peer) hostPickCategory(msg.idx)
+        if (gs.phase === 'category-selection' && gs.currentLeader === conn.peer)
+          hostPickCategory(msg.idx)
       }
       if (msg.type === 'submit-guess') {
         const gs = gameStateRef.current
         const hg = hostGameRef.current
-        if (gs.phase === 'guessing' && hg.guesserOrder[hg.guesserIdx] === conn.peer) hostProcessGuess(conn.peer, msg.cardId)
+        if (gs.phase === 'guessing' && hg.guesserOrder[hg.guesserIdx] === conn.peer)
+          hostProcessGuess(conn.peer, msg.cardId)
       }
     })
 
     conn.on('close', () => {
-      const leaving = playersRef.current.find(p => p.peerId === conn.peer)
+      const leaving = playersRef.current.find((p) => p.peerId === conn.peer)
       clientConnsRef.current.delete(conn.peer)
       removePlayer(conn.peer)
       if (leaving) {
-        broadcast({ type: 'player-left', peerId: conn.peer, name: leaving.name } satisfies ToClientMsg)
+        broadcast({
+          type: 'player-left',
+          peerId: conn.peer,
+          name: leaving.name,
+        } satisfies ToClientMsg)
         addChat({ name: '', text: `${leaving.name} left the room.`, self: false })
         if (gameStateRef.current.phase !== 'game-over') {
           const hg = hostGameRef.current
-          hg.activePlayers = hg.activePlayers.filter(id => id !== conn.peer)
-          hg.leaderQueue = hg.leaderQueue.filter(id => id !== conn.peer)
-          if (hg.activePlayers.length <= 1) broadcastGame({ type: 'game-over', winner: hg.activePlayers[0] ?? '' })
+          hg.activePlayers = hg.activePlayers.filter((id) => id !== conn.peer)
+          hg.leaderQueue = hg.leaderQueue.filter((id) => id !== conn.peer)
+          if (hg.activePlayers.length <= 1)
+            broadcastGame({ type: 'game-over', winner: hg.activePlayers[0] ?? '' })
           else if (gameStateRef.current.phase === 'guessing') {
-            hg.guesserOrder = hg.guesserOrder.filter(id => id !== conn.peer)
+            hg.guesserOrder = hg.guesserOrder.filter((id) => id !== conn.peer)
             if (hg.guesserIdx >= hg.guesserOrder.length) hg.guesserIdx = 0
           }
         }
       }
     })
 
-    conn.on('error', err => setPeerError(err.message))
+    conn.on('error', (err) => setPeerError(err.message))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const wireHostConn = useCallback((conn: DataConnection) => {
+  const wireHostConn = useCallback((conn: AnyDataConnection) => {
     hostConnRef.current = conn
+    // Timeout: if the WebRTC connection doesn't open in 10s, show feedback
+    const connTimeout = setTimeout(() => {
+      if (conn.open === false && conn.peerConnection?.connectionState !== 'connected') {
+        setPeerError(
+          'Connection timed out. Make sure the host has started a multiplayer game and the ID is correct.',
+        )
+        conn.close()
+      }
+    }, 10_000)
     conn.on('open', () => {
-      conn.send({ type: 'hello', name: myNameRef.current, peerId: myPeerIdRef.current } satisfies ToHostMsg)
+      clearTimeout(connTimeout)
+      conn.send({
+        type: 'hello',
+        name: myNameRef.current,
+        peerId: myPeerIdRef.current,
+      } satisfies ToHostMsg)
     })
-    conn.on('data', raw => {
+    conn.on('data', (raw) => {
       const msg = raw as ToClientMsg
-      if (msg.type === 'player-list') { playersRef.current = msg.players.filter(p => p.peerId !== myPeerIdRef.current); setPlayers([...playersRef.current]) }
-      if (msg.type === 'player-joined') { addPlayer(msg.player); addChat({ name: '', text: `${msg.player.name} joined.`, self: false }) }
-      if (msg.type === 'player-left') { removePlayer(msg.peerId); addChat({ name: '', text: `${msg.name} left.`, self: false }) }
+      if (msg.type === 'player-list') {
+        playersRef.current = msg.players.filter((p) => p.peerId !== myPeerIdRef.current)
+        setPlayers([...playersRef.current])
+      }
+      if (msg.type === 'player-joined') {
+        addPlayer(msg.player)
+        addChat({ name: '', text: `${msg.player.name} joined.`, self: false })
+      }
+      if (msg.type === 'player-left') {
+        removePlayer(msg.peerId)
+        addChat({ name: '', text: `${msg.name} left.`, self: false })
+      }
       if (msg.type === 'chat') addChat({ name: msg.name, text: msg.text, self: false })
-      const gameMsgTypes: ToClientMsg['type'][] = ['game-start', 'round-start', 'guessing-start', 'guess-correct', 'guess-wrong', 'game-over']
+      const gameMsgTypes: ToClientMsg['type'][] = [
+        'game-start',
+        'round-start',
+        'guessing-start',
+        'guess-correct',
+        'guess-wrong',
+        'game-over',
+      ]
       if (gameMsgTypes.includes(msg.type)) applyGameMsg(msg)
     })
-    conn.on('close', () => setHostLeft(true))
-    conn.on('error', err => setPeerError(err.message))
+    conn.on('close', () => {
+      clearTimeout(connTimeout)
+      setHostLeft(true)
+    })
+    conn.on('error', (err) => {
+      clearTimeout(connTimeout)
+      setPeerError(err.message)
+    })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── UI event handlers ─────────────────────────────────────────────────────────
-
-  const handleNameSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (name.trim()) setLobbyPhase('mode-select')
-  }
 
   const handleHostMultiplayer = () => {
     myNameRef.current = name.trim()
@@ -478,21 +584,34 @@ export default function CardCategories() {
     isSoloRef.current = false
     setIsHost(true)
     setIsSolo(false)
-    const peer = new Peer({ config: { iceServers: ICE_SERVERS } })
+    // On localhost use a BroadcastChannel transport instead of PeerJS/WebRTC.
+    // Firefox isolates mDNS ICE candidates between normal + private browsing
+    // contexts and may block STUN/TURN servers with Enhanced Tracking Protection,
+    // making WebRTC fail.  BroadcastChannel works reliably across same-origin tabs.
+    const isLocalDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+    const peer = isLocalDev ? createLocalPeer() : new Peer({ config: { iceServers: ICE_SERVERS } })
     peerRef.current = peer
-    peer.on('open', id => { myPeerIdRef.current = id; setMyPeerId(id); setLobbyPhase('lobby') })
-    peer.on('connection', conn => {
-      if (!isHostRef.current || playersRef.current.length >= MAX_PLAYERS - 1) { conn.close(); return }
+    peer.on('open', (id) => {
+      myPeerIdRef.current = id
+      setMyPeerId(id)
+      setLobbyPhase('lobby')
+    })
+    peer.on('connection', (conn) => {
+      if (!isHostRef.current || playersRef.current.length >= MAX_PLAYERS - 1) {
+        conn.close()
+        return
+      }
       wireClientConn(conn)
       setLobbyPhase('room')
     })
-    peer.on('error', err => setPeerError(err.message))
+    peer.on('error', (err) => setPeerError(err.message))
   }
 
   const handleJoin = (e: React.FormEvent) => {
     e.preventDefault()
     const id = joinId.trim()
     if (!id || !peerRef.current) return
+    setPeerError(null)
     isHostRef.current = false
     setIsHost(false)
     wireHostConn(peerRef.current.connect(id))
@@ -501,7 +620,10 @@ export default function CardCategories() {
 
   const handleCopy = () => {
     if (!myPeerId) return
-    navigator.clipboard.writeText(myPeerId).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) })
+    navigator.clipboard.writeText(myPeerId).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
   }
 
   const handleSendChat = (e: React.FormEvent) => {
@@ -543,6 +665,7 @@ export default function CardCategories() {
     isHostRef.current = false
     setSoloScore(0)
     setSoloRoundWon(false)
+    setScoreEntrySeen(false)
   }
 
   // ── Render helpers ────────────────────────────────────────────────────────────
@@ -557,7 +680,8 @@ export default function CardCategories() {
     const l = gs.lives[peerId] ?? MAX_LIVES
     return (
       <span className={`cc-hearts${l <= 0 ? ' cc-hearts--dead' : ''}`}>
-        {'♥'.repeat(Math.max(0, l))}{'♡'.repeat(Math.max(0, MAX_LIVES - l))}
+        {'♥'.repeat(Math.max(0, l))}
+        {'♡'.repeat(Math.max(0, MAX_LIVES - l))}
       </span>
     )
   }
@@ -568,34 +692,57 @@ export default function CardCategories() {
     return (
       <div className="pvp-lobby">
         <h2 className="pvp-lobby__title">Card Categories</h2>
-        <form className="pvp-lobby__form" onSubmit={handleNameSubmit}>
-          <label className="pvp-lobby__label" htmlFor="cc-name">Your name</label>
-          <input id="cc-name" className="pvp-lobby__input" type="text" value={name}
-            onChange={e => setName(e.target.value)} placeholder="Enter your name…" maxLength={24} autoFocus />
-          <button className="hol-btn" type="submit" disabled={!name.trim()}>Continue</button>
-        </form>
+        <div className="cc-mode-select">
+          <button className="cc-mode-btn" onClick={startSolo}>
+            <span className="cc-mode-btn__icon">🃏</span>
+            <span className="cc-mode-btn__label">Solo</span>
+            <span className="cc-mode-btn__desc">
+              Play alone — pick categories and guess matching cards. 3 lives.
+            </span>
+          </button>
+          <button className="cc-mode-btn" onClick={() => setLobbyPhase('name-entry')}>
+            <span className="cc-mode-btn__icon">👥</span>
+            <span className="cc-mode-btn__label">Multiplayer</span>
+            <span className="cc-mode-btn__desc">
+              Host a room and invite friends. Last player standing wins.
+            </span>
+          </button>
+        </div>
       </div>
     )
   }
 
-  if (lobbyPhase === 'mode-select') {
+  if (lobbyPhase === 'name-entry') {
     return (
       <div className="pvp-lobby">
-        <h2 className="pvp-lobby__title">Card Categories</h2>
-        <p className="pvp-lobby__you">Welcome, <strong>{name}</strong>!</p>
-        <div className="cc-mode-select">
-          <button className="cc-mode-btn" onClick={() => startSolo(name)}>
-            <span className="cc-mode-btn__icon">🃏</span>
-            <span className="cc-mode-btn__label">Solo</span>
-            <span className="cc-mode-btn__desc">Play alone — pick categories and guess matching cards. 3 lives.</span>
+        <h2 className="pvp-lobby__title">Card Categories — Multiplayer</h2>
+        <form
+          className="pvp-lobby__form"
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (name.trim()) handleHostMultiplayer()
+          }}
+        >
+          <label className="pvp-lobby__label" htmlFor="cc-name">
+            Your name
+          </label>
+          <input
+            id="cc-name"
+            className="pvp-lobby__input"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Enter your name…"
+            maxLength={24}
+            autoFocus
+          />
+          <button className="hol-btn" type="submit" disabled={!name.trim()}>
+            Continue
           </button>
-          <button className="cc-mode-btn" onClick={handleHostMultiplayer}>
-            <span className="cc-mode-btn__icon">👥</span>
-            <span className="cc-mode-btn__label">Multiplayer</span>
-            <span className="cc-mode-btn__desc">Host a room and invite friends. Last player standing wins.</span>
-          </button>
-        </div>
-        <button className="pvp-lobby__copy-btn" onClick={() => setLobbyPhase('setup')}>← Back</button>
+        </form>
+        <button className="pvp-lobby__copy-btn" onClick={() => setLobbyPhase('setup')}>
+          ← Back
+        </button>
       </div>
     )
   }
@@ -604,15 +751,21 @@ export default function CardCategories() {
     return (
       <div className="pvp-lobby">
         <h2 className="pvp-lobby__title">Card Categories</h2>
-        <p className="pvp-lobby__you">You: <strong>{name}</strong></p>
+        <p className="pvp-lobby__you">
+          You: <strong>{name}</strong>
+        </p>
         {!myPeerId && <p className="pvp-lobby__hint">Connecting to network…</p>}
         {myPeerId && (
           <>
             <section className="pvp-lobby__section">
-              <p className="pvp-lobby__label">Your game code — share with up to {MAX_PLAYERS - 1} friends:</p>
+              <p className="pvp-lobby__label">
+                Your game code — share with up to {MAX_PLAYERS - 1} friends:
+              </p>
               <div className="pvp-lobby__id-row">
                 <code className="pvp-lobby__id">{myPeerId}</code>
-                <button className="pvp-lobby__copy-btn" onClick={handleCopy}>{copied ? 'Copied!' : 'Copy'}</button>
+                <button className="pvp-lobby__copy-btn" onClick={handleCopy}>
+                  {copied ? 'Copied!' : 'Copy'}
+                </button>
               </div>
             </section>
             <div className="pvp-lobby__divider">or</div>
@@ -620,9 +773,16 @@ export default function CardCategories() {
               <form onSubmit={handleJoin}>
                 <p className="pvp-lobby__label">Join a friend's game:</p>
                 <div className="pvp-lobby__id-row">
-                  <input className="pvp-lobby__input pvp-lobby__input--wide" type="text" value={joinId}
-                    onChange={e => setJoinId(e.target.value)} placeholder="Paste their game code…" />
-                  <button className="hol-btn" type="submit" disabled={!joinId.trim()}>Join</button>
+                  <input
+                    className="pvp-lobby__input pvp-lobby__input--wide"
+                    type="text"
+                    value={joinId}
+                    onChange={(e) => setJoinId(e.target.value)}
+                    placeholder="Paste their game code…"
+                  />
+                  <button className="hol-btn" type="submit" disabled={!joinId.trim()}>
+                    Join
+                  </button>
                 </div>
               </form>
             </section>
@@ -639,10 +799,18 @@ export default function CardCategories() {
         <div className="pvp-lobby">
           <h2 className="pvp-lobby__title">Host disconnected</h2>
           <p className="pvp-lobby__hint">The host left the room.</p>
-          <button className="hol-btn" onClick={() => {
-            setHostLeft(false); setLobbyPhase('lobby'); setPlayers([])
-            playersRef.current = []; setChatMessages([])
-          }}>Back to lobby</button>
+          <button
+            className="hol-btn"
+            onClick={() => {
+              setHostLeft(false)
+              setLobbyPhase('lobby')
+              setPlayers([])
+              playersRef.current = []
+              setChatMessages([])
+            }}
+          >
+            Back to lobby
+          </button>
         </div>
       )
     }
@@ -651,54 +819,79 @@ export default function CardCategories() {
     return (
       <div className="pvp-room">
         <aside className="pvp-room__sidebar">
-          <h2 className="pvp-lobby__title">Room — {allPlayers.length}/{MAX_PLAYERS}</h2>
+          <h2 className="pvp-lobby__title">
+            Room — {allPlayers.length}/{MAX_PLAYERS}
+          </h2>
           {isHost && !isFull && myPeerId && (
             <div className="pvp-lobby__id-row">
               <code className="pvp-lobby__id">{myPeerId}</code>
-              <button className="pvp-lobby__copy-btn" onClick={handleCopy}>{copied ? 'Copied!' : 'Copy'}</button>
+              <button className="pvp-lobby__copy-btn" onClick={handleCopy}>
+                {copied ? 'Copied!' : 'Copy'}
+              </button>
             </div>
           )}
           <ul className="pvp-lobby__player-list">
-            {allPlayers.map(p => (
+            {allPlayers.map((p) => (
               <li key={p.peerId} className="pvp-lobby__player-row">
                 <span className="pvp-lobby__dot pvp-lobby__dot--online" />
                 <span className="pvp-lobby__player-name">
                   {p.name}
                   {p.peerId === myPeerId && <span className="pvp-lobby__tag"> you</span>}
-                  {isHost && p.peerId === myPeerId && <span className="pvp-lobby__tag pvp-lobby__tag--host"> host</span>}
+                  {isHost && p.peerId === myPeerId && (
+                    <span className="pvp-lobby__tag pvp-lobby__tag--host"> host</span>
+                  )}
                 </span>
               </li>
             ))}
             {Array.from({ length: MAX_PLAYERS - allPlayers.length }).map((_, i) => (
               <li key={`empty-${i}`} className="pvp-lobby__player-row pvp-lobby__player-row--empty">
-                <span className="pvp-lobby__dot" /><span>Waiting…</span>
+                <span className="pvp-lobby__dot" />
+                <span>Waiting…</span>
               </li>
             ))}
           </ul>
-          {isFull
-            ? <p className="pvp-lobby__hint pvp-lobby__hint--ready">Room full!</p>
-            : <p className="pvp-lobby__hint">Waiting for players…</p>}
-          {isHost
-            ? <button className="hol-btn cc-start-btn" onClick={hostStartGame}>Start Game</button>
-            : <p className="pvp-lobby__hint">Waiting for host to start…</p>}
+          {isFull ? (
+            <p className="pvp-lobby__hint pvp-lobby__hint--ready">Room full!</p>
+          ) : (
+            <p className="pvp-lobby__hint">Waiting for players…</p>
+          )}
+          {isHost ? (
+            <button className="hol-btn cc-start-btn" onClick={hostStartGame}>
+              Start Game
+            </button>
+          ) : (
+            <p className="pvp-lobby__hint">Waiting for host to start…</p>
+          )}
           {peerError && <p className="pvp-lobby__error">{peerError}</p>}
         </aside>
         <div className="pvp-chat">
           <div className="pvp-chat__messages">
-            {chatMessages.map(m =>
-              m.name
-                ? <div key={m.id} className={`pvp-chat__msg${m.self ? ' pvp-chat__msg--self' : ''}`}>
-                    <span className="pvp-chat__msg-name">{m.name}</span>
-                    <span className="pvp-chat__msg-text">{m.text}</span>
-                  </div>
-                : <div key={m.id} className="pvp-chat__msg pvp-chat__msg--system">{m.text}</div>
+            {chatMessages.map((m) =>
+              m.name ? (
+                <div key={m.id} className={`pvp-chat__msg${m.self ? ' pvp-chat__msg--self' : ''}`}>
+                  <span className="pvp-chat__msg-name">{m.name}</span>
+                  <span className="pvp-chat__msg-text">{m.text}</span>
+                </div>
+              ) : (
+                <div key={m.id} className="pvp-chat__msg pvp-chat__msg--system">
+                  {m.text}
+                </div>
+              ),
             )}
             <div ref={chatEndRef} />
           </div>
           <form className="pvp-chat__input-row" onSubmit={handleSendChat}>
-            <input className="pvp-chat__input" type="text" value={chatInput}
-              onChange={e => setChatInput(e.target.value)} placeholder="Say something…" maxLength={200} />
-            <button className="pvp-lobby__copy-btn" type="submit" disabled={!chatInput.trim()}>Send</button>
+            <input
+              className="pvp-chat__input"
+              type="text"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              placeholder="Say something…"
+              maxLength={200}
+            />
+            <button className="pvp-lobby__copy-btn" type="submit" disabled={!chatInput.trim()}>
+              Send
+            </button>
           </form>
         </div>
       </div>
@@ -708,23 +901,43 @@ export default function CardCategories() {
   // ── Game phase ────────────────────────────────────────────────────────────────
 
   if (gs.phase === 'game-over') {
+    if (isSolo && !scoreEntrySeen) {
+      return (
+        <ScoreEntry
+          score={soloScore}
+          onSubmit={(n) => {
+            addScore('cardCategories', n, soloScore)
+            setScoreEntrySeen(true)
+          }}
+          onSkip={() => setScoreEntrySeen(true)}
+        />
+      )
+    }
     const winnerName = gs.winner ? playerName(gs.winner) : null
     return (
       <div className="cc-gameover">
         <h2 className="cc-gameover__title">Game Over!</h2>
-        {winnerName
-          ? <p className="cc-gameover__winner">🏆 {winnerName} wins!</p>
-          : <p className="cc-gameover__winner">No lives remaining!</p>}
-        {isSolo && <p className="cc-gameover__score">Score: <strong>{soloScore}</strong> {soloScore === 1 ? 'point' : 'points'}</p>}
+        {winnerName ? (
+          <p className="cc-gameover__winner">🏆 {winnerName} wins!</p>
+        ) : (
+          <p className="cc-gameover__winner">No lives remaining!</p>
+        )}
+        {isSolo && (
+          <p className="cc-gameover__score">
+            Score: <strong>{soloScore}</strong> {soloScore === 1 ? 'point' : 'points'}
+          </p>
+        )}
         <div className="cc-gameover__final-lives">
-          {allPlayers.map(p => (
+          {allPlayers.map((p) => (
             <div key={p.peerId} className="cc-gameover__player">
               <span className="cc-gameover__player-name">{playerName(p.peerId)}</span>
               {renderLives(p.peerId)}
             </div>
           ))}
         </div>
-        <button className="hol-btn" onClick={resetToLobby}>Play Again</button>
+        <button className="hol-btn" onClick={resetToLobby}>
+          Play Again
+        </button>
       </div>
     )
   }
@@ -733,7 +946,7 @@ export default function CardCategories() {
     return (
       <div className="cc-category-phase">
         <div className="cc-lives-bar">
-          {allPlayers.map(p => (
+          {allPlayers.map((p) => (
             <div key={p.peerId} className="cc-player-life">
               <span className="cc-player-life__name">{playerName(p.peerId)}</span>
               {renderLives(p.peerId)}
@@ -741,16 +954,23 @@ export default function CardCategories() {
           ))}
         </div>
         <p className="cc-category-phase__leader-line">
-          {iAmLeader
-            ? 'Pick a category to guess!'
-            : <><strong>{gs.currentLeader ? playerName(gs.currentLeader) : '?'}</strong> is choosing a category…</>}
+          {iAmLeader ? (
+            'Pick a category to guess!'
+          ) : (
+            <>
+              <strong>{gs.currentLeader ? playerName(gs.currentLeader) : '?'}</strong> is choosing a
+              category…
+            </>
+          )}
         </p>
         <div className="cc-category-list">
           {gs.categories.map((cat, i) => (
-            <button key={i}
+            <button
+              key={i}
               className={`cc-category-btn${iAmLeader ? ' cc-category-btn--selectable' : ''}`}
               onClick={iAmLeader ? () => handlePickCategory(i) : undefined}
-              disabled={!iAmLeader}>
+              disabled={!iAmLeader}
+            >
               {cat.label}
             </button>
           ))}
@@ -762,96 +982,123 @@ export default function CardCategories() {
 
   // Guessing phase
   const guessesByPlayer = new Map<string, GuessRecord[]>()
-  for (const p of allPlayers) guessesByPlayer.set(p.peerId, gs.correctGuesses.filter(g => g.peerId === p.peerId))
+  for (const p of allPlayers)
+    guessesByPlayer.set(
+      p.peerId,
+      gs.correctGuesses.filter((g) => g.peerId === p.peerId),
+    )
 
   return (
     <div className="cc-game">
       <div className="cc-game__header">
         <p className="cc-game__category-label">{gs.selectedCategory?.label ?? ''}</p>
-        {isSolo
-          ? <p className="cc-game__status">
-              Score: <strong>{soloScore}</strong> &nbsp;·&nbsp; {gs.correctGuesses.length}/3 guessed
-            </p>
-          : <p className="cc-game__status">
-              {iAmGuesser ? 'Your turn — search for a matching card!' : `Waiting for ${playerName(currentGuesserPeerId ?? '')}…`}
-            </p>}
+        {isSolo ? (
+          <p className="cc-game__status">
+            Score: <strong>{soloScore}</strong> &nbsp;·&nbsp; {gs.correctGuesses.length}/3 guessed
+          </p>
+        ) : (
+          <p className="cc-game__status">
+            {iAmGuesser
+              ? 'Your turn — type a card name below!'
+              : `Waiting for ${playerName(currentGuesserPeerId ?? '')}…`}
+          </p>
+        )}
       </div>
 
-      {soloRoundWon && (
-        <div className="cc-round-won-flash">
-          ✓ Round complete! +1 point
-        </div>
-      )}
+      {soloRoundWon && <div className="cc-round-won-flash">✓ Round complete! +1 point</div>}
 
       {!soloRoundWon && gs.wrongFlash && (
         <div className="cc-wrong-flash">
           ✕ {isSolo ? 'Wrong!' : `${playerName(gs.wrongFlash)} guessed wrong`}
-          {' — '}{gs.lives[gs.wrongFlash] ?? 0} {(gs.lives[gs.wrongFlash] ?? 0) === 1 ? 'life' : 'lives'} left
+          {' — '}
+          {gs.lives[gs.wrongFlash] ?? 0} {(gs.lives[gs.wrongFlash] ?? 0) === 1 ? 'life' : 'lives'}{' '}
+          left
         </div>
       )}
 
       <div className="cc-columns">
-        {allPlayers.map(p => {
+        {allPlayers.map((p) => {
+          const isMyCol = isSolo || p.peerId === myPeerId
           const isCurrentGuesser = isSolo || p.peerId === currentGuesserPeerId
+          const showSearch = isCurrentGuesser && isMyCol && iAmGuesser
           const guesses = guessesByPlayer.get(p.peerId) ?? []
           const isDead = (gs.lives[p.peerId] ?? MAX_LIVES) <= 0
           return (
-            <div key={p.peerId} className={`cc-player-col${isCurrentGuesser ? ' cc-player-col--active' : ''}${isDead ? ' cc-player-col--eliminated' : ''}`}>
+            <div
+              key={p.peerId}
+              className={`cc-player-col${isCurrentGuesser ? ' cc-player-col--active' : ''}${isDead ? ' cc-player-col--eliminated' : ''}`}
+            >
               <div className="cc-player-col__header">
                 <div className="cc-player-col__name">{playerName(p.peerId)}</div>
                 {renderLives(p.peerId)}
               </div>
               <div className="cc-player-col__guesses">
-                {guesses.map(g => (
+                {guesses.map((g) => (
                   <div key={g.cardId} className="cc-guess-item">
-                    <img src={`https://images.ygoprodeck.com/images/cards_cropped/${g.cardId}.jpg`}
-                      alt={g.cardName} className="cc-guess-item__img" />
+                    <img
+                      src={`https://images.ygoprodeck.com/images/cards_cropped/${g.cardId}.jpg`}
+                      alt={g.cardName}
+                      className="cc-guess-item__img"
+                    />
                     <span className="cc-guess-item__name">{g.cardName}</span>
                   </div>
                 ))}
               </div>
+              {showSearch && (
+                <div className="cc-player-col__search">
+                  <div className="card-search">
+                    <input
+                      ref={searchInputRef}
+                      className="card-search-input"
+                      placeholder="Search for a card…"
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value)
+                        if (e.target.value.length >= 2) {
+                          if (searchInputRef.current)
+                            searchDropdownRect.current =
+                              searchInputRef.current.getBoundingClientRect()
+                          setSearchOpen(true)
+                        }
+                      }}
+                      onFocus={() => {
+                        if (searchInputRef.current)
+                          searchDropdownRect.current =
+                            searchInputRef.current.getBoundingClientRect()
+                        setSearchOpen(true)
+                      }}
+                      onBlur={() => setTimeout(() => setSearchOpen(false), 150)}
+                      autoFocus
+                      autoComplete="off"
+                    />
+                    {searchOpen && searchResults.length > 0 && searchDropdownRect.current && (
+                      <ul
+                        className="search-dropdown"
+                        style={{
+                          position: 'fixed',
+                          bottom: window.innerHeight - searchDropdownRect.current.top + 2,
+                          left: searchDropdownRect.current.left,
+                          width: searchDropdownRect.current.width,
+                        }}
+                      >
+                        {searchResults.map((card) => (
+                          <li
+                            key={card.id}
+                            className="search-dropdown-item"
+                            onMouseDown={() => handleSubmitGuess(card.id)}
+                          >
+                            {card.name}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )
         })}
       </div>
-
-      {iAmGuesser ? (
-        <div className="cc-game__search">
-          <p className="cc-game__search-hint">Category: <strong>{gs.selectedCategory?.label}</strong></p>
-          <div className="card-search">
-            <input ref={searchInputRef} className="card-search-input"
-              placeholder="Search for a card name…" value={searchQuery}
-              onChange={e => {
-                setSearchQuery(e.target.value)
-                if (e.target.value.length >= 2) {
-                  if (searchInputRef.current) searchDropdownRect.current = searchInputRef.current.getBoundingClientRect()
-                  setSearchOpen(true)
-                }
-              }}
-              onFocus={() => { if (searchInputRef.current) searchDropdownRect.current = searchInputRef.current.getBoundingClientRect(); setSearchOpen(true) }}
-              onBlur={() => setTimeout(() => setSearchOpen(false), 150)}
-              autoFocus autoComplete="off" />
-            {searchOpen && searchResults.length > 0 && searchDropdownRect.current && (
-              <ul className="search-dropdown" style={{
-                position: 'fixed',
-                top: searchDropdownRect.current.bottom + 2,
-                left: searchDropdownRect.current.left,
-                width: searchDropdownRect.current.width,
-              }}>
-                {searchResults.map(card => (
-                  <li key={card.id} className="search-dropdown-item" onMouseDown={() => handleSubmitGuess(card.id)}>
-                    {card.name}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-      ) : (
-        <div className="cc-game__waiting">
-          Waiting for <strong>{playerName(currentGuesserPeerId ?? '')}</strong> to guess a card…
-        </div>
-      )}
     </div>
   )
 }
