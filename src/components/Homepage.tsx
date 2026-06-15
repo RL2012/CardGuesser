@@ -11,9 +11,52 @@ export default function Homepage({ onPlay }: Props) {
 
   return (
     <div className="homepage">
+      <div className="homepage-modes">
+        <div className="game-mode-card">
+          <div className="game-mode-card__header">
+            <span className="game-mode-card__icon">🎴</span>
+            <h2 className="game-mode-card__title">Card Guesser</h2>
+          </div>
+          <p className="game-mode-card__desc">
+            A random card is shown zoomed into a cropped section. Type the name to guess it — the sooner you guess (at higher zoom) the more points you earn. Each wrong guess costs points. 60 seconds per card, 15-minute challenge.
+          </p>
+          <button className="hol-btn game-mode-card__btn" onClick={() => onPlay('card-guesser')}>
+            Play
+          </button>
+        </div>
+
+        <div className="game-mode-card">
+          <div className="game-mode-card__header">
+            <span className="game-mode-card__icon">⬆⬇</span>
+            <h2 className="game-mode-card__title">Higher or Lower</h2>
+          </div>
+          <p className="game-mode-card__desc">
+            Two face-down monster cards are revealed. Guess which has the higher ATK stat. Keep a streak going — every 3 correct answers in a row earns a bonus life. You start with 3 lives.
+          </p>
+          <button className="hol-btn game-mode-card__btn" onClick={() => onPlay('higher-or-lower')}>
+            Play
+          </button>
+        </div>
+
+        <div className="game-mode-card">
+          <div className="game-mode-card__header">
+            <span className="game-mode-card__icon">🃏</span>
+            <h2 className="game-mode-card__title">Card Categories</h2>
+          </div>
+          <p className="game-mode-card__desc">
+            A category is announced — like "LIGHT Warriors" or "Forbidden Effect Monsters". Name any cards that match it. Play solo to score points per round (3 lives), or host a real-time multiplayer room where the last player standing wins.
+          </p>
+          <button className="hol-btn game-mode-card__btn" onClick={() => onPlay('card-categories')}>
+            Play
+          </button>
+        </div>
+      </div>
+
+      <h2 className="homepage__leaderboards-heading">Leaderboards</h2>
+
       <div className="leaderboard-grid">
         <section className="leaderboard-section">
-          <h2 className="leaderboard-section__title">Card Guesser</h2>
+          <h3 className="leaderboard-section__title">Card Guesser</h3>
           <table className="leaderboard-table">
             <thead>
               <tr>
@@ -40,13 +83,10 @@ export default function Homepage({ onPlay }: Props) {
               )}
             </tbody>
           </table>
-          <button className="hol-btn leaderboard-section__play-btn" onClick={() => onPlay('card-guesser')}>
-            Play Card Guesser
-          </button>
         </section>
 
         <section className="leaderboard-section">
-          <h2 className="leaderboard-section__title">Higher or Lower</h2>
+          <h3 className="leaderboard-section__title">Higher or Lower</h3>
           <table className="leaderboard-table">
             <thead>
               <tr>
@@ -73,13 +113,10 @@ export default function Homepage({ onPlay }: Props) {
               )}
             </tbody>
           </table>
-          <button className="hol-btn leaderboard-section__play-btn" onClick={() => onPlay('higher-or-lower')}>
-            Play Higher or Lower
-          </button>
         </section>
 
         <section className="leaderboard-section">
-          <h2 className="leaderboard-section__title">Card Categories</h2>
+          <h3 className="leaderboard-section__title">Card Categories</h3>
           <table className="leaderboard-table">
             <thead>
               <tr>
@@ -106,9 +143,6 @@ export default function Homepage({ onPlay }: Props) {
               )}
             </tbody>
           </table>
-          <button className="hol-btn leaderboard-section__play-btn" onClick={() => onPlay('card-categories')}>
-            Play Card Categories
-          </button>
         </section>
       </div>
     </div>

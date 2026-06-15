@@ -25,8 +25,8 @@
   display: flex;
   flex: 1;
   min-height: 0;
-  gap: 2.5rem;
-  padding: 1.75rem 2rem;
+  gap: 2rem;
+  padding: 1.25rem 1.5rem;
   align-items: flex-start;
   overflow: hidden;
 }
@@ -862,17 +862,77 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 2.5rem 2rem;
+  padding: 1.5rem;
+  gap: 1.75rem;
   overflow-y: auto;
   flex: 1;
 }
 
+.homepage-modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1.25rem;
+  width: 100%;
+  max-width: 1100px;
+}
+
+.game-mode-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.game-mode-card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.game-mode-card__icon {
+  font-size: 1.375rem;
+  line-height: 1;
+}
+
+.game-mode-card__title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.game-mode-card__desc {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+  margin: 0;
+  flex: 1;
+}
+
+.game-mode-card__btn {
+  align-self: flex-start;
+  margin-top: auto;
+}
+
+.homepage__leaderboards-heading {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  width: 100%;
+  max-width: 1100px;
+}
+
 .leaderboard-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2.5rem;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1.75rem;
   width: 100%;
-  max-width: 860px;
+  max-width: 1100px;
 }
 
 .leaderboard-section {
@@ -882,7 +942,7 @@
 }
 
 .leaderboard-section__title {
-  font-size: 1.375rem;
+  font-size: 1rem;
   font-weight: 700;
   margin: 0;
 }
@@ -1390,6 +1450,11 @@
   margin: 0;
 }
 
+.cc-gameover__score {
+  font-size: 1.2rem;
+  margin: 0;
+}
+
 .cc-gameover__final-lives {
   display: flex;
   gap: 2rem;
@@ -1412,10 +1477,16 @@
   letter-spacing: 0.04em;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 900px) {
+  .homepage-modes {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 750px) {
   .leaderboard-grid {
     grid-template-columns: 1fr;
-    gap: 2rem;
+    gap: 1.5rem;
   }
 }
 
