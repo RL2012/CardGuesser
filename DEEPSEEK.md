@@ -42,7 +42,7 @@ Run `npm run lint:fix` to auto-fix most issues, then review and re-stage before 
 
 **PvP networking** (`src/components/card-categories/`): Star topology — the first player to enter a name becomes host; others connect peer-to-peer to the host's peer ID. The host relays all messages (`ToClientMsg`) to other clients. Non-hosts send `ToHostMsg` only to the host.
 
-- **`CardCategories.tsx`** — Main component: lobby, game state, host game logic, network event wiring. Manages connection state with refs (not Redux) to avoid stale closure issues.
+- **`CardCategories.tsx`** — Main component: lobby, game state, host game logic, network event wiring. Manages connection state with refs (not Redux) to avoid stale closure issues. In multiplayer, the host runs a 60-second per-turn `setTimeout`; expiry calls `hostHandleWrong` (same as a wrong guess). Clients receive a `turnDeadline` timestamp in `guessing-start`/`guess-correct` messages and render a countdown bar.
 - **`network.ts`** — Network constants: `ICE_SERVERS` (metered.ca TURN credentials), `MAX_PLAYERS`, message types (`ToHostMsg` / `ToClientMsg`).
 - **`categoryUtils.ts`** — Category generation (`generateCategories`) and card matching logic (`cardMatchesCategory`).
 - **`LocalTransport.ts`** — WebSocket-based transport for localhost multiplayer. Replaces PeerJS/WebRTC on localhost because Firefox isolates mDNS ICE candidates between normal + private browsing contexts and may block STUN/TURN via Enhanced Tracking Protection. Firefox also partitions BroadcastChannel between normal/private tabs, so a WebSocket relay server (`scripts/relay-server.mjs`, started alongside Vite via `npm run dev`) is used instead. Not used in production (GitHub Pages uses real PeerJS with TURN relays).
