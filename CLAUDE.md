@@ -41,3 +41,7 @@ No test suite exists — there are no test files or test scripts.
 **Deployment:** GitHub Actions (`deploy.yml`) builds on push to `main` and deploys `dist/` to GitHub Pages. Vite base is `/CardGuesser/`.
 
 **Typed hooks:** `src/hooks.ts` exports `useAppDispatch` and `useAppSelector` — always use these instead of the raw Redux hooks.
+
+## README maintenance
+
+Update `README.md` before or as part of every commit. If a commit adds a game mode, changes scoring, adds a feature (leaderboards, PvP, etc.), or changes any setup/deployment step, the README must reflect it in the same commit.

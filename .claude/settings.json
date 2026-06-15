@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(git commit *)",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"REMINDER: A git commit was just made. Review the changes in that commit and update README.md if any features, game modes, setup steps, or deployment details changed.\"}}'",
+            "shell": "powershell"
+          }
+        ]
+      }
+    ]
+  }
+}
