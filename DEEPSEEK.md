@@ -1,4 +1,4 @@
-# DEEPSEEK.md
+# deepseek.md
 
 This file provides guidance to DeepSeek when working with code in this repository.
 
@@ -79,23 +79,19 @@ Never commit a lock file produced by `npm install --legacy-peer-deps` — it cau
 - `src/utils/utils.ts` — shared utility functions (`getRandomCard`, `formatTime`, `randomCrop`, `preloadImages`)
 - `src/services/leaderboard.ts` — localStorage leaderboard service (`getLeaderboard`, `addScore`; also exports `LeaderboardEntry` and `GameKey` types)
 
-## README maintenance
-
-Update `README.md` before or as part of every commit. If a commit adds a game mode, changes scoring, adds a feature (leaderboards, PvP, etc.), or changes any setup/deployment step, the README must reflect it in the same commit.
-
 ## Cross-file sync
 
-`CLAUDE.md` and `DEEPSEEK.md` must be kept in sync. After every code change, update both files to reflect the new state of the project (new files, changed architecture, new commands, etc.). The content should be identical except for the heading and any AI-specific notes.
+`CLAUDE.md` and `deepseek.md` must be kept in sync. After every code change, update both files to reflect the new state of the project (new files, changed architecture, new commands, etc.). The content should be identical except for the heading and any AI-specific notes.
 
-## Global CLAUDE.md propagation
+## Global CLAUDE.md / DEEPSEEK.md propagation
 
-The global orchestrator context lives at `C:\Users\milyu\source\repos\CLAUDE.md`. It contains the authoritative per-repo summary that cross-repo sessions and subagents read to understand this project.
+The global orchestrator context lives at `C:\Users\milyu\source\repos\CLAUDE.md` and `C:\Users\milyu\source\repos\DEEPSEEK.md`. These contain the authoritative per-repo summary that cross-repo sessions and subagents read to understand this project.
 
-After any significant change in this repo, **also update the `### CardGuesser` section in that global file** so it stays accurate.
+After any significant change in this repo, **also update the `### CardGuesser` section in both global files** so they stay accurate.
 
 ### What counts as a significant change
 
-Update the global `CLAUDE.md` when you:
+Update the global files when you:
 - Add, remove, or rename a major game mode or feature
 - Add, remove, or upgrade a key dependency (new major library, framework version bump)
 - Change a build command, script name, or dev workflow step
@@ -104,8 +100,8 @@ Update the global `CLAUDE.md` when you:
 - Change the deployment process or GitHub Actions workflow
 - Add or remove a top-level npm script
 
-**Do not** update the global file for routine bug fixes, minor refactors, style tweaks, or anything that doesn't affect how an agent unfamiliar with the repo should approach working in it.
+**Do not** update the global files for routine bug fixes, minor refactors, style tweaks, or anything that doesn't affect how an agent unfamiliar with the repo should approach working in it.
 
 ### What to update
 
-Find the `### CardGuesser` section in `C:\Users\milyu\source\repos\CLAUDE.md` and update whichever parts accurately reflect your change: the feature list, the key files table, the stack description, the commands block, or the card data notes.
+Find the `### CardGuesser` section in `C:\Users\milyu\source\repos\CLAUDE.md` (and `DEEPSEEK.md`) and update whichever parts accurately reflect your change: the feature list, the key files table, the stack description, the commands block, or the card data notes.

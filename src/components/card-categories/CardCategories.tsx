@@ -344,7 +344,7 @@ export default function CardCategories() {
         gameStateRef.current = { ...gameStateRef.current, wrongFlash: null, wrongCard: null }
       }, 1800)
     } else if (msg.type === 'game-over') {
-      next = { ...next, phase: 'game-over', winner: msg.winner }
+      next = { ...next, phase: 'game-over', winner: msg.winner, prevRoundInfo: msg.prevRoundInfo ?? null }
       setTurnDeadline(null)
     } else {
       return
@@ -375,7 +375,7 @@ export default function CardCategories() {
     hostStartRound()
   }
 
-  function hostStartRound() {
+  function hostStartRound(capturedPrevRoundInfo?: PrevRoundInfo) {
     const hg = hostGameRef.current
     const gs = gameStateRef.current
     const active = hg.activePlayers
@@ -384,17 +384,6 @@ export default function CardCategories() {
     if (!isSoloRef.current && active.length <= 1) {
       broadcastGame({ type: 'game-over', winner: active[0] ?? '' })
       return
-    }
-
-    // Compute unguessed correct answers from the just-ended round
-    let prevRoundInfo: PrevRoundInfo | undefined
-    if (gs.selectedCategory) {
-      const usedIds = new Set(gs.usedCardIds)
-      const unguessedCards = cardsRef.current
-        .filter((c) => c.atk !== null && cardMatchesCategory(c, gs.selectedCategory!) && !usedIds.has(c.id))
-        .slice(0, 24)
-        .map((c) => ({ cardId: c.id, cardName: c.name }))
-      prevRoundInfo = { categoryLabel: gs.selectedCategory.label, unguessedCards }
     }
 
     // Rotate through playerOrder, skipping eliminated players, in a fixed sequence
@@ -409,7 +398,7 @@ export default function CardCategories() {
 
     const cats = generateCategories(cardsRef.current)
     const lives = { ...gs.lives }
-    broadcastGame({ type: 'round-start', leader, categories: cats, lives, prevRoundInfo })
+    broadcastGame({ type: 'round-start', leader, categories: cats, lives, prevRoundInfo: capturedPrevRoundInfo })
   }
 
   function hostPickCategory(idx: number) {
@@ -494,6 +483,17 @@ export default function CardCategories() {
       hg.activePlayers = hg.activePlayers.filter((id) => id !== guesserPeerId)
     }
 
+    // Capture prevRoundInfo now, before any state changes, so stale category/cards can't bleed in
+    let capturedPrevRoundInfo: PrevRoundInfo | undefined
+    if (!isSoloRef.current && gs.selectedCategory) {
+      const usedIds = new Set(gs.usedCardIds)
+      const unguessedCards = cardsRef.current
+        .filter((c) => c.atk !== null && cardMatchesCategory(c, gs.selectedCategory!) && !usedIds.has(c.id))
+        .slice(0, 40)
+        .map((c) => ({ cardId: c.id, cardName: c.name }))
+      capturedPrevRoundInfo = { categoryLabel: gs.selectedCategory.label, unguessedCards }
+    }
+
     broadcastGame({ type: 'guess-wrong', guesser: guesserPeerId, lives: newLives, eliminated, cardId, cardName })
 
     const active = hg.activePlayers
@@ -501,11 +501,11 @@ export default function CardCategories() {
     const delay = isGameOver ? 1800 : 2200
     setTimeout(() => {
       if (isGameOver) {
-        broadcastGame({ type: 'game-over', winner: isSoloRef.current ? '' : (active[0] ?? '') })
+        broadcastGame({ type: 'game-over', winner: isSoloRef.current ? '' : (active[0] ?? ''), prevRoundInfo: capturedPrevRoundInfo })
       } else if (isSoloRef.current) {
         soloStartNewRound()
-      } else {
-        hostStartRound()
+      } else if (gameStateRef.current.phase !== 'category-selection') {
+        hostStartRound(capturedPrevRoundInfo)
       }
     }, delay)
   }
@@ -1085,6 +1085,25 @@ export default function CardCategories() {
             </div>
           ))}
         </div>
+        {gs.prevRoundInfo && gs.prevRoundInfo.unguessedCards.length > 0 && (
+          <div className="cc-prev-round">
+            <p className="cc-prev-round__title">
+              Other valid answers for <em>{gs.prevRoundInfo.categoryLabel}</em>:
+            </p>
+            <div className="cc-prev-round__grid">
+              {gs.prevRoundInfo.unguessedCards.map((c) => (
+                <div key={c.cardId} className="cc-prev-round__card">
+                  <img
+                    src={`https://images.ygoprodeck.com/images/cards_cropped/${c.cardId}.jpg`}
+                    alt={c.cardName}
+                    className="cc-prev-round__card-img"
+                  />
+                  <span className="cc-prev-round__card-name">{c.cardName}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         {isSolo ? (
           <button className="hol-btn" onClick={resetToLobby}>Play Again</button>
         ) : isHost ? (

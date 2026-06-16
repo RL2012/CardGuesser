@@ -33,5 +33,5 @@ export type ToClientMsg =
   | { type: 'guessing-start'; category: import('./categoryUtils').Category; guesserOrder: string[]; turnDeadline?: number; turnDuration?: number }
   | { type: 'guess-correct'; guesser: string; cardId: number; cardName: string; nextGuesserIdx: number; turnDeadline?: number; turnDuration?: number }
   | { type: 'guess-wrong'; guesser: string; lives: Record<string, number>; eliminated: string | null; cardId: number | null; cardName: string | null }
-  | { type: 'game-over'; winner: string }
+  | { type: 'game-over'; winner: string; prevRoundInfo?: { categoryLabel: string; unguessedCards: { cardId: number; cardName: string }[] } }
   | { type: 'back-to-lobby' }
