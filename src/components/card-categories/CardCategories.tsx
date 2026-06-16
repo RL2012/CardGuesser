@@ -48,6 +48,7 @@ interface GameState {
   wrongCard: { cardId: number; cardName: string } | null
   turnDuration: number
   prevRoundInfo: PrevRoundInfo | null
+  drawFlash: boolean
 }
 
 const INIT_GAME_STATE: GameState = {
@@ -65,6 +66,7 @@ const INIT_GAME_STATE: GameState = {
   wrongCard: null,
   turnDuration: 60_000,
   prevRoundInfo: null,
+  drawFlash: false,
 }
 
 type LobbyPhase = 'setup' | 'name-entry' | 'lobby' | 'room' | 'game'
@@ -142,6 +144,7 @@ export default function CardCategories() {
     guesserIdx: 0,
     usedCardIds: new Set<number>(),
     turnDuration: 60_000,         // ms; decreases by 5s per full rotation, min 10s
+    rotationCount: 0,             // full rotations completed in the current guessing session
   })
 
   // ── Turn timer (multiplayer only) ─────────────────────────────────────────────
@@ -298,6 +301,7 @@ export default function CardCategories() {
         winner: null,
         turnDuration: 60_000,
         prevRoundInfo: msg.prevRoundInfo ?? null,
+        drawFlash: false,
       }
       setTurnDeadline(null)
     } else if (msg.type === 'guessing-start') {
@@ -343,6 +347,9 @@ export default function CardCategories() {
         setGameState((gs) => ({ ...gs, wrongFlash: null, wrongCard: null }))
         gameStateRef.current = { ...gameStateRef.current, wrongFlash: null, wrongCard: null }
       }, 1800)
+    } else if (msg.type === 'round-draw') {
+      next = { ...next, drawFlash: true }
+      setTurnDeadline(null)
     } else if (msg.type === 'game-over') {
       next = { ...next, phase: 'game-over', winner: msg.winner, prevRoundInfo: msg.prevRoundInfo ?? null }
       setTurnDeadline(null)
@@ -367,6 +374,7 @@ export default function CardCategories() {
       guesserIdx: 0,
       usedCardIds: new Set(),
       turnDuration: 60_000,
+      rotationCount: 0,
     }
     gameStateRef.current = { ...INIT_GAME_STATE, lives }
     setGameState(gameStateRef.current)
@@ -394,7 +402,8 @@ export default function CardCategories() {
     hg.usedCardIds = new Set()
     hg.guesserOrder = []
     hg.guesserIdx = 0
-    hg.turnDuration = 60_000  // reset turn timer for each new round
+    hg.turnDuration = 60_000
+    hg.rotationCount = 0
 
     const cats = generateCategories(cardsRef.current)
     const lives = { ...gs.lives }
@@ -442,12 +451,22 @@ export default function CardCategories() {
     hg.usedCardIds.add(cardId)
     const prevIdx = hg.guesserIdx
     const nextIdx = isSoloRef.current ? 0 : (prevIdx + 1) % hg.guesserOrder.length
-    // Full rotation completed: every guesser had a turn — tighten the timer
+    // Full rotation completed: every guesser had a turn — tighten the timer and count it
     if (!isSoloRef.current && nextIdx === 0 && hg.guesserOrder.length > 1) {
       hg.turnDuration = Math.max(10_000, hg.turnDuration - 5_000)
+      hg.rotationCount++
     }
     hg.guesserIdx = nextIdx
-    const nextDeadline = !isSoloRef.current ? Date.now() + hg.turnDuration : undefined
+
+    // Draw conditions (multiplayer only): all valid cards guessed, or 20 full rotations passed
+    const remainingCards = !isSoloRef.current
+      ? cardsRef.current.filter(
+          (c) => c.atk !== null && cardMatchesCategory(c, gs.selectedCategory!) && !hg.usedCardIds.has(c.id),
+        )
+      : []
+    const isDraw = !isSoloRef.current && (remainingCards.length === 0 || hg.rotationCount >= 20)
+
+    const nextDeadline = !isSoloRef.current && !isDraw ? Date.now() + hg.turnDuration : undefined
     broadcastGame({
       type: 'guess-correct',
       guesser: guesserPeerId,
@@ -457,6 +476,20 @@ export default function CardCategories() {
       turnDeadline: nextDeadline,
       turnDuration: hg.turnDuration,
     })
+
+    if (isDraw) {
+      const capturedPrevRoundInfo =
+        remainingCards.length > 0
+          ? {
+              categoryLabel: gs.selectedCategory.label,
+              unguessedCards: remainingCards.slice(0, 40).map((c) => ({ cardId: c.id, cardName: c.name })),
+            }
+          : undefined
+      broadcastGame({ type: 'round-draw' })
+      setTimeout(() => hostStartRound(capturedPrevRoundInfo), 2000)
+      return
+    }
+
     if (!isSoloRef.current) startTurnTimer(hg.guesserOrder[nextIdx])
 
     // Solo: 3 correct guesses in a row = round won, award a point
@@ -557,6 +590,7 @@ export default function CardCategories() {
       guesserIdx: 0,
       usedCardIds: new Set(),
       turnDuration: 60_000,
+      rotationCount: 0,
     }
     gameStateRef.current = {
       ...INIT_GAME_STATE,
@@ -684,6 +718,7 @@ export default function CardCategories() {
         'guessing-start',
         'guess-correct',
         'guess-wrong',
+        'round-draw',
         'game-over',
         'back-to-lobby',
       ]
@@ -819,6 +854,7 @@ export default function CardCategories() {
       guesserIdx: 0,
       usedCardIds: new Set(),
       turnDuration: 60_000,
+      rotationCount: 0,
     }
     setTurnDeadline(null)
     setSearchQuery('')
@@ -1221,7 +1257,11 @@ export default function CardCategories() {
 
       {soloRoundWon && <div className="cc-round-won-flash">✓ Round complete! +1 point</div>}
 
-      {!soloRoundWon && gs.wrongFlash && (
+      {gs.drawFlash && (
+        <div className="cc-round-draw-flash">Draw! No one loses a life.</div>
+      )}
+
+      {!soloRoundWon && !gs.drawFlash && gs.wrongFlash && (
         <div className="cc-wrong-flash">
           <div className="cc-wrong-flash__text">
             ✕ {isSolo ? 'Wrong!' : `${playerNameForRender(gs.wrongFlash)} guessed wrong`}

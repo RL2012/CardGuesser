@@ -12,8 +12,9 @@ export interface CardDataFix {
 }
 
 export const CARD_DATA_FIXES: Record<number, CardDataFix> = {
-  // Ext Ryzeal — API returns no ban status; correct value is "Limited"
+  // Ext Ryzeal/White binder — API returns no ban status; correct value is "Limited"
   34022970: { banTcg: 'Limited' },
+  95454996: { banTcg: 'Forbidden' },
 }
 
 export function applyDataFix<T extends { id: number; banTcg: string | null }>(card: T): T {
