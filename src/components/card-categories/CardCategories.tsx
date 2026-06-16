@@ -78,7 +78,6 @@ export default function CardCategories() {
   const [players, setPlayers] = useState<PlayerInfo[]>([])
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [chatInput, setChatInput] = useState('')
-  const [hostLeft, setHostLeft] = useState(false)
   const [isHost, setIsHost] = useState(false)
 
   // Game state
@@ -572,16 +571,19 @@ export default function CardCategories() {
         addChat({ name: '', text: `${leaving.name} left the room.`, self: false })
         if (gameStateRef.current.phase !== 'game-over') {
           const hg = hostGameRef.current
-          hg.activePlayers = hg.activePlayers.filter((id) => id !== conn.peer)
-          if (hg.activePlayers.length <= 1) {
-            clearTurnTimer()
-            broadcastGame({ type: 'game-over', winner: hg.activePlayers[0] ?? '' })
-          } else if (gameStateRef.current.phase === 'guessing') {
-            const wasCurrentGuesser = hg.guesserOrder[hg.guesserIdx] === conn.peer
-            hg.guesserOrder = hg.guesserOrder.filter((id) => id !== conn.peer)
-            if (hg.guesserIdx >= hg.guesserOrder.length) hg.guesserIdx = 0
-            if (wasCurrentGuesser && hg.guesserOrder.length > 0)
-              startTurnTimer(hg.guesserOrder[hg.guesserIdx])
+          // Only manipulate activePlayers if the game has actually started
+          if (hg.activePlayers.length > 0) {
+            hg.activePlayers = hg.activePlayers.filter((id) => id !== conn.peer)
+            if (hg.activePlayers.length <= 1) {
+              clearTurnTimer()
+              broadcastGame({ type: 'game-over', winner: hg.activePlayers[0] ?? '' })
+            } else if (gameStateRef.current.phase === 'guessing') {
+              const wasCurrentGuesser = hg.guesserOrder[hg.guesserIdx] === conn.peer
+              hg.guesserOrder = hg.guesserOrder.filter((id) => id !== conn.peer)
+              if (hg.guesserIdx >= hg.guesserOrder.length) hg.guesserIdx = 0
+              if (wasCurrentGuesser && hg.guesserOrder.length > 0)
+                startTurnTimer(hg.guesserOrder[hg.guesserIdx])
+            }
           }
         }
       }
@@ -637,7 +639,8 @@ export default function CardCategories() {
     })
     conn.on('close', () => {
       clearTimeout(connTimeout)
-      setHostLeft(true)
+      resetToLobby()
+      setPeerError('The host disconnected.')
     })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     conn.on('error', (err: any) => {
@@ -726,6 +729,9 @@ export default function CardCategories() {
     clearTurnTimer()
     peerRef.current?.destroy()
     peerRef.current = null
+    hostConnRef.current = null
+    clientConnsRef.current.clear()
+    myPeerIdRef.current = ''
     setLobbyPhase('setup')
     setGameState(INIT_GAME_STATE)
     gameStateRef.current = INIT_GAME_STATE
@@ -733,6 +739,7 @@ export default function CardCategories() {
     playersRef.current = []
     setChatMessages([])
     setMyPeerId(null)
+    setPeerError(null)
     setIsSolo(false)
     isSoloRef.current = false
     setIsHost(false)
@@ -769,6 +776,7 @@ export default function CardCategories() {
     return (
       <div className="pvp-lobby">
         <h2 className="pvp-lobby__title">Card Categories</h2>
+        {peerError && <p className="pvp-lobby__error">{peerError}</p>}
         <div className="cc-mode-select">
           <button className="cc-mode-btn" onClick={startSolo}>
             <span className="cc-mode-btn__icon">🃏</span>
@@ -871,27 +879,6 @@ export default function CardCategories() {
   }
 
   if (lobbyPhase === 'room') {
-    if (hostLeft) {
-      return (
-        <div className="pvp-lobby">
-          <h2 className="pvp-lobby__title">Host disconnected</h2>
-          <p className="pvp-lobby__hint">The host left the room.</p>
-          <button
-            className="hol-btn"
-            onClick={() => {
-              setHostLeft(false)
-              setLobbyPhase('lobby')
-              setPlayers([])
-              playersRef.current = []
-              setChatMessages([])
-            }}
-          >
-            Back to lobby
-          </button>
-        </div>
-      )
-    }
-
     const isFull = allPlayers.length >= MAX_PLAYERS
     return (
       <div className="pvp-room">

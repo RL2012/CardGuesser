@@ -22,9 +22,27 @@ No test suite exists — there are no test files or test scripts.
 A husky pre-commit hook runs `npm run lint`. If linting fails the commit is aborted.
 Run `npm run lint:fix` to auto-fix most issues, then review and re-stage before committing.
 
+## After installing npm packages
+
+After any `npm install` that adds or updates packages, always verify the lock file is CI-compatible before committing:
+
+```bash
+npm ci
+```
+
+`npm ci` is what GitHub Actions uses to install dependencies. If it fails with a lock file mismatch (e.g. `package-lock.json` was generated with `--legacy-peer-deps` or other non-standard flags), the deployment will break.
+
+**If `npm ci` fails after install:**
+1. Delete `node_modules/` and `package-lock.json`
+2. Run `npm install` without any extra flags
+3. Run `npm ci` again to confirm the fresh lock file is valid
+4. Commit the updated `package-lock.json`
+
+Never commit a lock file produced by `npm install --legacy-peer-deps` — it causes `npm ci` to fail in CI.
+
 ## Architecture
 
-**Stack:** React 19 + TypeScript + Vite, Redux Toolkit for game state, Fuse.js for fuzzy search, PeerJS for WebRTC.
+**Stack:** React 19 + TypeScript + Vite, Redux Toolkit for game state, Fuse.js for fuzzy search, PeerJS for WebRTC. TypeScript target is ES2022 with `verbatimModuleSyntax` and `erasableSyntaxOnly` enabled (matches YgoDomainBuilder reference config).
 
 **Card data loading** (`src/store/cardsSlice.ts`): On startup `App.tsx` dispatches `fetchCards`, which tries `GET /cards.txt` (a pre-generated pipe-delimited flat file) and falls back to the live ygoprodeck API. All three game modes gate rendering behind `status === 'succeeded'`. Card images are loaded from `images.ygoprodeck.com/{id}.jpg` (external CDN, not bundled). The `public/cards.txt` format is `id|name|frameType|type|attribute|atk|def|level|race|archetype|sets(JSON)|banTcg|views|viewsWeek|tcgDate` (15 pipe-delimited columns) — regenerated via `npm run fetch-cards`.
 
@@ -42,7 +60,7 @@ Run `npm run lint:fix` to auto-fix most issues, then review and re-stage before 
 
 **PvP networking** (`src/components/card-categories/`): Star topology — the first player to enter a name becomes host; others connect peer-to-peer to the host's peer ID. The host relays all messages (`ToClientMsg`) to other clients. Non-hosts send `ToHostMsg` only to the host.
 
-- **`CardCategories.tsx`** — Main component: lobby, game state, host game logic, network event wiring. Manages connection state with refs (not Redux) to avoid stale closure issues. In multiplayer, the host runs a 60-second per-turn `setTimeout`; expiry calls `hostHandleWrong` (same as a wrong guess). Clients receive a `turnDeadline` timestamp in `guessing-start`/`guess-correct` messages and render a countdown bar.
+- **`CardCategories.tsx`** — Main component: lobby, game state, host game logic, network event wiring. Manages connection state with refs (not Redux) to avoid stale closure issues. In multiplayer, the host runs a 60-second per-turn `setTimeout`; expiry calls `hostHandleWrong` (same as a wrong guess). Clients receive a `turnDeadline` timestamp in `guessing-start`/`guess-correct` messages and render a countdown bar. When the host disconnects, guests are automatically redirected to the setup screen with an error message.
 - **`network.ts`** — Network constants: `ICE_SERVERS` (metered.ca TURN credentials), `MAX_PLAYERS`, message types (`ToHostMsg` / `ToClientMsg`).
 - **`categoryUtils.ts`** — Category generation (`generateCategories`) and card matching logic (`cardMatchesCategory`).
 - **`LocalTransport.ts`** — WebSocket-based transport for localhost multiplayer. Replaces PeerJS/WebRTC on localhost because Firefox isolates mDNS ICE candidates between normal + private browsing contexts and may block STUN/TURN via Enhanced Tracking Protection. Firefox also partitions BroadcastChannel between normal/private tabs, so a WebSocket relay server (`scripts/relay-server.mjs`, started alongside Vite via `npm run dev`) is used instead. Not used in production (GitHub Pages uses real PeerJS with TURN relays).
