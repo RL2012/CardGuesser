@@ -28,6 +28,11 @@ const LOCAL_PEER_ID = '__local__'
 
 // ── Game state ────────────────────────────────────────────────────────────────
 
+interface PrevRoundInfo {
+  categoryLabel: string
+  unguessedCards: { cardId: number; cardName: string }[]
+}
+
 interface GameState {
   phase: 'category-selection' | 'guessing' | 'game-over'
   lives: Record<string, number>
@@ -41,6 +46,8 @@ interface GameState {
   winner: string | null
   wrongFlash: string | null
   wrongCard: { cardId: number; cardName: string } | null
+  turnDuration: number
+  prevRoundInfo: PrevRoundInfo | null
 }
 
 const INIT_GAME_STATE: GameState = {
@@ -56,6 +63,8 @@ const INIT_GAME_STATE: GameState = {
   winner: null,
   wrongFlash: null,
   wrongCard: null,
+  turnDuration: 60_000,
+  prevRoundInfo: null,
 }
 
 type LobbyPhase = 'setup' | 'name-entry' | 'lobby' | 'room' | 'game'
@@ -132,6 +141,7 @@ export default function CardCategories() {
     guesserOrder: [] as string[],
     guesserIdx: 0,
     usedCardIds: new Set<number>(),
+    turnDuration: 60_000,         // ms; decreases by 5s per full rotation, min 10s
   })
 
   // ── Turn timer (multiplayer only) ─────────────────────────────────────────────
@@ -145,12 +155,13 @@ export default function CardCategories() {
 
   function startTurnTimer(guesserPeerId: string) {
     clearTurnTimer()
+    const duration = hostGameRef.current.turnDuration
     turnTimerRef.current = setTimeout(() => {
       if (gameStateRef.current.phase !== 'guessing') return
       const hg = hostGameRef.current
       if (hg.guesserOrder[hg.guesserIdx] !== guesserPeerId) return
       hostHandleWrong(guesserPeerId, null, null)
-    }, 60_000)
+    }, duration)
   }
 
   // ── Fuzzy search ─────────────────────────────────────────────────────────────
@@ -285,6 +296,8 @@ export default function CardCategories() {
         wrongFlash: null,
         wrongCard: null,
         winner: null,
+        turnDuration: 60_000,
+        prevRoundInfo: msg.prevRoundInfo ?? null,
       }
       setTurnDeadline(null)
     } else if (msg.type === 'guessing-start') {
@@ -294,6 +307,7 @@ export default function CardCategories() {
         selectedCategory: msg.category,
         guesserOrder: msg.guesserOrder,
         currentGuesserIdx: 0,
+        turnDuration: msg.turnDuration ?? next.turnDuration,
       }
       setSearchQuery('')
       setSearchOpen(false)
@@ -310,6 +324,7 @@ export default function CardCategories() {
         usedCardIds: [...next.usedCardIds, msg.cardId],
         currentGuesserIdx: msg.nextGuesserIdx,
         wrongFlash: null,
+        turnDuration: msg.turnDuration ?? next.turnDuration,
       }
       setSearchQuery('')
       setSearchOpen(false)
@@ -351,6 +366,7 @@ export default function CardCategories() {
       guesserOrder: [],
       guesserIdx: 0,
       usedCardIds: new Set(),
+      turnDuration: 60_000,
     }
     gameStateRef.current = { ...INIT_GAME_STATE, lives }
     setGameState(gameStateRef.current)
@@ -361,12 +377,24 @@ export default function CardCategories() {
 
   function hostStartRound() {
     const hg = hostGameRef.current
+    const gs = gameStateRef.current
     const active = hg.activePlayers
 
     // Multiplayer: last player standing wins
     if (!isSoloRef.current && active.length <= 1) {
       broadcastGame({ type: 'game-over', winner: active[0] ?? '' })
       return
+    }
+
+    // Compute unguessed correct answers from the just-ended round
+    let prevRoundInfo: PrevRoundInfo | undefined
+    if (gs.selectedCategory) {
+      const usedIds = new Set(gs.usedCardIds)
+      const unguessedCards = cardsRef.current
+        .filter((c) => c.atk !== null && cardMatchesCategory(c, gs.selectedCategory!) && !usedIds.has(c.id))
+        .slice(0, 24)
+        .map((c) => ({ cardId: c.id, cardName: c.name }))
+      prevRoundInfo = { categoryLabel: gs.selectedCategory.label, unguessedCards }
     }
 
     // Rotate through playerOrder, skipping eliminated players, in a fixed sequence
@@ -377,10 +405,11 @@ export default function CardCategories() {
     hg.usedCardIds = new Set()
     hg.guesserOrder = []
     hg.guesserIdx = 0
+    hg.turnDuration = 60_000  // reset turn timer for each new round
 
     const cats = generateCategories(cardsRef.current)
-    const lives = { ...gameStateRef.current.lives }
-    broadcastGame({ type: 'round-start', leader, categories: cats, lives })
+    const lives = { ...gs.lives }
+    broadcastGame({ type: 'round-start', leader, categories: cats, lives, prevRoundInfo })
   }
 
   function hostPickCategory(idx: number) {
@@ -398,8 +427,8 @@ export default function CardCategories() {
 
     hg.guesserOrder = order
     hg.guesserIdx = 0
-    const deadline = !isSoloRef.current ? Date.now() + 60_000 : undefined
-    broadcastGame({ type: 'guessing-start', category: cat, guesserOrder: order, turnDeadline: deadline })
+    const deadline = !isSoloRef.current ? Date.now() + hg.turnDuration : undefined
+    broadcastGame({ type: 'guessing-start', category: cat, guesserOrder: order, turnDeadline: deadline, turnDuration: hg.turnDuration })
     if (!isSoloRef.current) startTurnTimer(order[0])
   }
 
@@ -422,9 +451,14 @@ export default function CardCategories() {
     }
 
     hg.usedCardIds.add(cardId)
-    const nextIdx = isSoloRef.current ? 0 : (hg.guesserIdx + 1) % hg.guesserOrder.length
+    const prevIdx = hg.guesserIdx
+    const nextIdx = isSoloRef.current ? 0 : (prevIdx + 1) % hg.guesserOrder.length
+    // Full rotation completed: every guesser had a turn — tighten the timer
+    if (!isSoloRef.current && nextIdx === 0 && hg.guesserOrder.length > 1) {
+      hg.turnDuration = Math.max(10_000, hg.turnDuration - 5_000)
+    }
     hg.guesserIdx = nextIdx
-    const nextDeadline = !isSoloRef.current ? Date.now() + 60_000 : undefined
+    const nextDeadline = !isSoloRef.current ? Date.now() + hg.turnDuration : undefined
     broadcastGame({
       type: 'guess-correct',
       guesser: guesserPeerId,
@@ -432,6 +466,7 @@ export default function CardCategories() {
       cardName: card.name,
       nextGuesserIdx: nextIdx,
       turnDeadline: nextDeadline,
+      turnDuration: hg.turnDuration,
     })
     if (!isSoloRef.current) startTurnTimer(hg.guesserOrder[nextIdx])
 
@@ -521,6 +556,7 @@ export default function CardCategories() {
       guesserOrder: [LOCAL_PEER_ID],
       guesserIdx: 0,
       usedCardIds: new Set(),
+      turnDuration: 60_000,
     }
     gameStateRef.current = {
       ...INIT_GAME_STATE,
@@ -782,6 +818,7 @@ export default function CardCategories() {
       guesserOrder: [],
       guesserIdx: 0,
       usedCardIds: new Set(),
+      turnDuration: 60_000,
     }
     setTurnDeadline(null)
     setSearchQuery('')
@@ -1091,6 +1128,25 @@ export default function CardCategories() {
           ))}
           {gs.categories.length === 0 && <p className="pvp-lobby__hint">Generating categories…</p>}
         </div>
+        {gs.prevRoundInfo && gs.prevRoundInfo.unguessedCards.length > 0 && (
+          <div className="cc-prev-round">
+            <p className="cc-prev-round__title">
+              Other valid answers for <em>{gs.prevRoundInfo.categoryLabel}</em>:
+            </p>
+            <div className="cc-prev-round__grid">
+              {gs.prevRoundInfo.unguessedCards.map((c) => (
+                <div key={c.cardId} className="cc-prev-round__card">
+                  <img
+                    src={`https://images.ygoprodeck.com/images/cards_cropped/${c.cardId}.jpg`}
+                    alt={c.cardName}
+                    className="cc-prev-round__card-img"
+                  />
+                  <span className="cc-prev-round__card-name">{c.cardName}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     )
   } else {
@@ -1106,6 +1162,11 @@ export default function CardCategories() {
     <div className="cc-game">
       <div className="cc-game__header">
         <p className="cc-game__category-label">{gs.selectedCategory?.label ?? ''}</p>
+        {gs.selectedCategory?.cardType === 'Effect Monster' && (
+          <p className="cc-game__type-note">
+            Only Effect Monster type cards count — Fusion, Synchro, XYZ, Link, Ritual, Flip, and Pendulum monsters are excluded
+          </p>
+        )}
         {isSolo ? (
           <p className="cc-game__status">
             Score: <strong>{soloScore}</strong> &nbsp;·&nbsp; {gs.correctGuesses.length}/3 guessed
@@ -1134,7 +1195,7 @@ export default function CardCategories() {
         <div className="cc-turn-timer-bar">
           <div
             className={`cc-turn-timer-bar__fill${secondsLeft <= 10 ? ' cc-turn-timer-bar__fill--urgent' : ''}`}
-            style={{ width: `${(secondsLeft / 60) * 100}%` }}
+            style={{ width: `${(secondsLeft / (gs.turnDuration / 1000)) * 100}%` }}
           />
         </div>
       )}

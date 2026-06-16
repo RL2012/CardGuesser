@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import type { Card, CardSet } from '../types/types'
+import { applyDataFix } from '../utils/dataFixes'
 
 const YGOPRO_API = 'https://db.ygoprodeck.com/api/v7/cardinfo.php?misc=yes'
 
@@ -65,7 +66,7 @@ function parseLine(line: string): Card {
   } catch {
     cardSets = []
   }
-  return {
+  return applyDataFix({
     id: parseInt(p[0]),
     name: p[1] ?? '',
     frameType: p[2] ?? '',
@@ -81,12 +82,12 @@ function parseLine(line: string): Card {
     views: parseInt(p[12]) || 0,
     viewsWeek: parseInt(p[13]) || 0,
     tcgDate: p[14] || null,
-  }
+  })
 }
 
 function mapYgoCard(c: YgoCard): Card {
   const misc = c.misc_info?.[0]
-  return {
+  return applyDataFix({
     id: c.id,
     name: c.name,
     frameType: c.frameType ?? '',
@@ -107,7 +108,7 @@ function mapYgoCard(c: YgoCard): Card {
     views: misc?.views ?? 0,
     viewsWeek: misc?.viewsweek ?? 0,
     tcgDate: misc?.tcg_date ?? null,
-  }
+  })
 }
 
 export const fetchCards = createAsyncThunk('cards/fetch', async () => {

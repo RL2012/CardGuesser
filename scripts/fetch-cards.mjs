@@ -44,3 +44,23 @@ const lines = data.map((c) => {
 
 writeFileSync(CARDS_TXT, lines.join('\n'), 'utf-8')
 console.log('Saved public/cards.txt')
+
+// ── Data-fix staleness check ──────────────────────────────────────────────────
+// When the API starts returning the correct value, these hardcodes in
+// src/utils/dataFixes.ts can be removed.
+const DATA_FIX_CHECKS = [
+  { id: 34022970, name: 'Ext Ryzeal', field: 'banlist_info.ban_tcg', correctValue: 'Limited',
+    actual: (c) => c.banlist_info?.ban_tcg ?? null },
+]
+for (const check of DATA_FIX_CHECKS) {
+  const card = data.find((c) => c.id === check.id)
+  if (!card) continue
+  const actual = check.actual(card)
+  if (actual === check.correctValue) {
+    console.warn(
+      `\n⚠  Data fix for "${check.name}" (ID ${check.id}) is now unnecessary.\n` +
+      `   API returned the correct value "${actual}" for ${check.field}.\n` +
+      `   Remove the entry from CARD_DATA_FIXES in src/utils/dataFixes.ts.\n`,
+    )
+  }
+}

@@ -29,9 +29,9 @@ export type ToClientMsg =
   | { type: 'player-left'; peerId: string; name: string }
   | { type: 'chat'; name: string; text: string }
   | { type: 'game-start' }
-  | { type: 'round-start'; leader: string; categories: import('./categoryUtils').Category[]; lives: Record<string, number> }
-  | { type: 'guessing-start'; category: import('./categoryUtils').Category; guesserOrder: string[]; turnDeadline?: number }
-  | { type: 'guess-correct'; guesser: string; cardId: number; cardName: string; nextGuesserIdx: number; turnDeadline?: number }
+  | { type: 'round-start'; leader: string; categories: import('./categoryUtils').Category[]; lives: Record<string, number>; prevRoundInfo?: { categoryLabel: string; unguessedCards: { cardId: number; cardName: string }[] } }
+  | { type: 'guessing-start'; category: import('./categoryUtils').Category; guesserOrder: string[]; turnDeadline?: number; turnDuration?: number }
+  | { type: 'guess-correct'; guesser: string; cardId: number; cardName: string; nextGuesserIdx: number; turnDeadline?: number; turnDuration?: number }
   | { type: 'guess-wrong'; guesser: string; lives: Record<string, number>; eliminated: string | null; cardId: number | null; cardName: string | null }
   | { type: 'game-over'; winner: string }
   | { type: 'back-to-lobby' }
