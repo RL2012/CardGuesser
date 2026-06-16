@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useAppDispatch, useAppSelector } from '../../hooks'
+import { useAppDispatch, useAppSelector } from '../../hooks/hooks'
 import { startGame, pickCard, nextRound, resetGame } from '../../store/higherOrLowerSlice'
-import { getRandomCard } from '../../utils'
+import { getRandomCard } from '../../utils/utils'
 import ScoreEntry from '../ScoreEntry'
-import { addScore } from '../../leaderboard'
-import type { Card } from '../../types'
+import { addScore } from '../../services/leaderboard'
+import type { Card } from '../../types/types'
 
 function getRandomPair(monsterCards: Card[]): [Card, Card] {
   const a = getRandomCard(monsterCards)

@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
-import type { Card, CardSet } from '../types'
+import type { Card, CardSet } from '../types/types'
 
 const YGOPRO_API = 'https://db.ygoprodeck.com/api/v7/cardinfo.php?misc=yes'
 

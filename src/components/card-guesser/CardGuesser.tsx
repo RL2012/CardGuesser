@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { useAppDispatch, useAppSelector } from '../../hooks'
+import { useAppDispatch, useAppSelector } from '../../hooks/hooks'
 import { startRound, correctGuess, replaceCard, skipCard, tickSecond, addWrongGuess } from '../../store/gameSlice'
-import { getRandomCard, randomCrop } from '../../utils'
+import { getRandomCard, randomCrop } from '../../utils/utils'
 import CardDisplay from './CardDisplay'
 import CardSearch from './CardSearch'
 import PreviousRounds from './PreviousRounds'
 import ScoreEntry from '../ScoreEntry'
-import { addScore } from '../../leaderboard'
-import type { Card } from '../../types'
+import { addScore } from '../../services/leaderboard'
+import type { Card } from '../../types/types'
 
 export default function CardGuesser() {
   const dispatch = useAppDispatch()

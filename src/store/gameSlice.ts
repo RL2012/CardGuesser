@@ -1,5 +1,5 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
-import type { Card } from '../types'
+import type { Card } from '../types/types'
 
 export interface PreviousRound {
   cardId: number

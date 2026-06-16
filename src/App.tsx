@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useAppDispatch, useAppSelector } from './hooks'
+import { useAppDispatch, useAppSelector } from './hooks/hooks'
 import { fetchCards } from './store/cardsSlice'
 import CardGuesser from './components/card-guesser/CardGuesser'
 import HigherOrLower from './components/higher-or-lower/HigherOrLower'

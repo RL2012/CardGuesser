@@ -20,6 +20,7 @@ export type ToHostMsg =
   | { type: 'chat'; name: string; text: string }
   | { type: 'pick-category'; idx: number }
   | { type: 'submit-guess'; cardId: number }
+  | { type: 'resign' }
 
 // Messages sent from the host to all clients
 export type ToClientMsg =
@@ -33,3 +34,4 @@ export type ToClientMsg =
   | { type: 'guess-correct'; guesser: string; cardId: number; cardName: string; nextGuesserIdx: number; turnDeadline?: number }
   | { type: 'guess-wrong'; guesser: string; lives: Record<string, number>; eliminated: string | null; cardId: number | null; cardName: string | null }
   | { type: 'game-over'; winner: string }
+  | { type: 'back-to-lobby' }

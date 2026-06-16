@@ -1,4 +1,4 @@
-import type { Card } from './types'
+import type { Card } from '../types/types'
 
 export function getRandomCard(cards: Card[], exclude?: Card): Card {
   const pool = exclude ? cards.filter((c) => c.id !== exclude.id) : cards

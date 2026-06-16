@@ -1,4 +1,4 @@
-import type { Card } from '../../types'
+import type { Card } from '../../types/types'
 
 export type CategoryTemplate =
   | 'attack' | 'defense'
@@ -34,7 +34,14 @@ export interface GuessRecord {
   cardName: string
 }
 
-const MIN_CARDS = 5
+const MIN_CARDS = 10
+
+// Treat Tuner subtypes as their base type for category matching and generation.
+// "Synchro Tuner Monster" → "Synchro Monster", "Tuner Monster" (Normal Tuner) → "Normal Monster"
+function normalizeType(type: string): string {
+  if (type === 'Tuner Monster') return 'Normal Monster'
+  return type.replace(' Tuner', '')
+}
 
 // ATK/DEF are rare — most categories should be more interesting combos
 const TEMPLATE_WEIGHTS: [CategoryTemplate, number][] = [
@@ -72,25 +79,26 @@ function pickRandom<T>(arr: T[]): T {
 }
 
 export function cardMatchesCategory(card: Card, cat: Category): boolean {
+  const cardType = normalizeType(card.type)
   switch (cat.template) {
     case 'attack':             return card.atk === cat.atk
     case 'defense':            return card.def === cat.def
     case 'race-attribute':     return card.race === cat.race && card.attribute === cat.attribute
-    case 'race-type':          return card.race === cat.race && card.type === cat.cardType
-    case 'attribute-type':     return card.attribute === cat.attribute && card.type === cat.cardType
-    case 'archetype-type':     return card.archetype === cat.archetype && card.type === cat.cardType
+    case 'race-type':          return card.race === cat.race && cardType === cat.cardType
+    case 'attribute-type':     return card.attribute === cat.attribute && cardType === cat.cardType
+    case 'archetype-type':     return card.archetype === cat.archetype && cardType === cat.cardType
     case 'archetype':          return card.archetype === cat.archetype
     case 'level-race':         return card.level === cat.level && card.race === cat.race && (cat.isLink ? card.frameType === 'link' : card.frameType !== 'link')
     case 'level-attribute':    return card.level === cat.level && card.attribute === cat.attribute && (cat.isLink ? card.frameType === 'link' : card.frameType !== 'link')
-    case 'level-type':         return card.level === cat.level && card.type === cat.cardType
+    case 'level-type':         return card.level === cat.level && cardType === cat.cardType
     case 'card-set':           return card.cardSets.some(s => s.setName === cat.setName)
-    case 'ban-type':           return card.banTcg === cat.banStatus && card.type === cat.cardType
+    case 'ban-type':           return card.banTcg === cat.banStatus && cardType === cat.cardType
     case 'top100week-attribute': return (cat.top100Ids?.includes(card.id) ?? false) && card.attribute === cat.attribute
-    case 'top100week-type':      return (cat.top100Ids?.includes(card.id) ?? false) && card.type === cat.cardType
+    case 'top100week-type':      return (cat.top100Ids?.includes(card.id) ?? false) && cardType === cat.cardType
     case 'top100week-race':      return (cat.top100Ids?.includes(card.id) ?? false) && card.race === cat.race
     case 'top100week-level':     return (cat.top100Ids?.includes(card.id) ?? false) && card.level === cat.level
     case 'release-attribute': return card.tcgDate != null && card.tcgDate.startsWith(`${cat.releaseYear}`) && card.attribute === cat.attribute
-    case 'release-type':      return card.tcgDate != null && card.tcgDate.startsWith(`${cat.releaseYear}`) && card.type === cat.cardType
+    case 'release-type':      return card.tcgDate != null && card.tcgDate.startsWith(`${cat.releaseYear}`) && cardType === cat.cardType
     case 'release-race':      return card.tcgDate != null && card.tcgDate.startsWith(`${cat.releaseYear}`) && card.race === cat.race
     case 'release-level':     return card.tcgDate != null && card.tcgDate.startsWith(`${cat.releaseYear}`) && card.level === cat.level
   }
@@ -137,8 +145,9 @@ function tryGenerate(cards: Card[], template: CategoryTemplate): Category | null
     const map = new Map<string, Combo>()
     for (const c of monsters) {
       if (!c.race || !c.type) continue
-      const key = `${c.race}|${c.type}`
-      const cur = map.get(key) ?? { race: c.race, cardType: c.type, count: 0 }
+      const cardType = normalizeType(c.type)
+      const key = `${c.race}|${cardType}`
+      const cur = map.get(key) ?? { race: c.race, cardType, count: 0 }
       map.set(key, { ...cur, count: cur.count + 1 })
     }
     const valid = [...map.values()].filter(v => v.count >= MIN_CARDS)
@@ -152,8 +161,9 @@ function tryGenerate(cards: Card[], template: CategoryTemplate): Category | null
     const map = new Map<string, Combo>()
     for (const c of monsters) {
       if (!c.attribute || !c.type) continue
-      const key = `${c.attribute}|${c.type}`
-      const cur = map.get(key) ?? { attribute: c.attribute, cardType: c.type, count: 0 }
+      const cardType = normalizeType(c.type)
+      const key = `${c.attribute}|${cardType}`
+      const cur = map.get(key) ?? { attribute: c.attribute, cardType, count: 0 }
       map.set(key, { ...cur, count: cur.count + 1 })
     }
     const valid = [...map.values()].filter(v => v.count >= MIN_CARDS)
@@ -167,8 +177,9 @@ function tryGenerate(cards: Card[], template: CategoryTemplate): Category | null
     const map = new Map<string, Combo>()
     for (const c of monsters) {
       if (!c.archetype || !c.type) continue
-      const key = `${c.archetype}|${c.type}`
-      const cur = map.get(key) ?? { archetype: c.archetype, cardType: c.type, count: 0 }
+      const cardType = normalizeType(c.type)
+      const key = `${c.archetype}|${cardType}`
+      const cur = map.get(key) ?? { archetype: c.archetype, cardType, count: 0 }
       map.set(key, { ...cur, count: cur.count + 1 })
     }
     const valid = [...map.values()].filter(v => v.count >= MIN_CARDS)
@@ -228,8 +239,9 @@ function tryGenerate(cards: Card[], template: CategoryTemplate): Category | null
     const map = new Map<string, Combo>()
     for (const c of monsters) {
       if (c.level === null || !c.type) continue
-      const key = `${c.level}|${c.type}`
-      const cur = map.get(key) ?? { level: c.level, cardType: c.type, count: 0 }
+      const cardType = normalizeType(c.type)
+      const key = `${c.level}|${cardType}`
+      const cur = map.get(key) ?? { level: c.level, cardType, count: 0 }
       map.set(key, { ...cur, count: cur.count + 1 })
     }
     const valid = [...map.values()].filter(v => v.count >= MIN_CARDS)
@@ -258,8 +270,9 @@ function tryGenerate(cards: Card[], template: CategoryTemplate): Category | null
     const map = new Map<string, Combo>()
     for (const c of monsters) {
       if (!c.banTcg || !c.type) continue
-      const key = `${c.banTcg}|${c.type}`
-      const cur = map.get(key) ?? { banStatus: c.banTcg, cardType: c.type, count: 0 }
+      const cardType = normalizeType(c.type)
+      const key = `${c.banTcg}|${cardType}`
+      const cur = map.get(key) ?? { banStatus: c.banTcg, cardType, count: 0 }
       map.set(key, { ...cur, count: cur.count + 1 })
     }
     const valid = [...map.values()].filter(v => v.count >= MIN_CARDS)
@@ -283,7 +296,7 @@ function tryGenerate(cards: Card[], template: CategoryTemplate): Category | null
     const top100 = [...monsters].sort((a, b) => b.viewsWeek - a.viewsWeek).slice(0, 100)
     const top100Ids = top100.map(c => c.id)
     const counts = new Map<string, number>()
-    for (const c of top100) { if (c.type) counts.set(c.type, (counts.get(c.type) ?? 0) + 1) }
+    for (const c of top100) { if (c.type) { const t = normalizeType(c.type); counts.set(t, (counts.get(t) ?? 0) + 1) } }
     const valid = [...counts.entries()].filter(([, n]) => n >= MIN_CARDS).map(([t]) => t)
     if (!valid.length) return null
     const cardType = pickRandom(valid)
@@ -332,7 +345,7 @@ function tryGenerate(cards: Card[], template: CategoryTemplate): Category | null
     const map = new Map<string, number>()
     for (const c of monsters) {
       if (!c.tcgDate || !c.type) continue
-      const key = `${c.tcgDate.slice(0, 4)}|${c.type}`
+      const key = `${c.tcgDate.slice(0, 4)}|${normalizeType(c.type)}`
       map.set(key, (map.get(key) ?? 0) + 1)
     }
     const valid = [...map.entries()].filter(([, n]) => n >= MIN_CARDS).map(([k]) => {

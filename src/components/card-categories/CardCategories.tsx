@@ -2,9 +2,9 @@ import { useRef, useState, useMemo, useCallback, useEffect, type ReactElement } 
 import Peer from 'peerjs'
 import type { DataConnection } from 'peerjs'
 import Fuse from 'fuse.js'
-import { useAppSelector } from '../../hooks'
+import { useAppSelector } from '../../hooks/hooks'
 import ScoreEntry from '../ScoreEntry'
-import { addScore } from '../../leaderboard'
+import { addScore } from '../../services/leaderboard'
 import { generateCategories, cardMatchesCategory } from './categoryUtils'
 import type { Category, GuessRecord } from './categoryUtils'
 import { createLocalPeer } from './LocalTransport'
@@ -68,7 +68,7 @@ export default function CardCategories() {
   const { cards } = useAppSelector((s) => s.cards)
 
   // Lobby / connection state
-  const [name, setName] = useState('')
+  const [name, setName] = useState(() => localStorage.getItem('cc-player-name') ?? '')
   const [lobbyPhase, setLobbyPhase] = useState<LobbyPhase>('setup')
   const [isSolo, setIsSolo] = useState(false)
   const [myPeerId, setMyPeerId] = useState<string | null>(null)
@@ -199,7 +199,7 @@ export default function CardCategories() {
       const norm = (s: string) => s.toLowerCase().replace(/[\s\-']/g, '')
       const normQuery = norm(debouncedQuery)
       const normArch = norm(cat.archetype)
-      if (normQuery.includes(normArch) || normArch.startsWith(normQuery)) return []
+      if (normQuery.includes(normArch) || normArch.includes(normQuery)) return []
     }
     const used = new Set(gameState.usedCardIds)
     return fuse
@@ -257,6 +257,16 @@ export default function CardCategories() {
 
     if (msg.type === 'game-start') {
       setLobbyPhase('game')
+      return
+    }
+
+    if (msg.type === 'back-to-lobby') {
+      gameStateRef.current = INIT_GAME_STATE
+      setGameState(INIT_GAME_STATE)
+      setTurnDeadline(null)
+      setSearchQuery('')
+      setSearchOpen(false)
+      setLobbyPhase('room')
       return
     }
 
@@ -380,11 +390,10 @@ export default function CardCategories() {
     const hg = hostGameRef.current
     const orderedActive = hg.playerOrder.filter((id) => hg.activePlayers.includes(id))
 
-    // Guessing starts from the player immediately after the leader so that
-    // selecting a category and guessing first are always separate turns.
+    // Guessing starts from the leader — the category picker goes first.
     const leaderPeerId = gameStateRef.current.currentLeader ?? ''
     const leaderPos = orderedActive.indexOf(leaderPeerId)
-    const startIdx = orderedActive.length > 1 ? (leaderPos + 1) % orderedActive.length : 0
+    const startIdx = leaderPos >= 0 ? leaderPos : 0
     const order = [...orderedActive.slice(startIdx), ...orderedActive.slice(0, startIdx)]
 
     hg.guesserOrder = order
@@ -556,6 +565,12 @@ export default function CardCategories() {
         if (gs.phase === 'guessing' && hg.guesserOrder[hg.guesserIdx] === conn.peer)
           hostProcessGuess(conn.peer, msg.cardId)
       }
+      if (msg.type === 'resign') {
+        const gs = gameStateRef.current
+        const hg = hostGameRef.current
+        if (gs.phase === 'guessing' && hg.guesserOrder[hg.guesserIdx] === conn.peer)
+          hostHandleWrong(conn.peer, null, null)
+      }
     })
 
     conn.on('close', () => {
@@ -634,6 +649,7 @@ export default function CardCategories() {
         'guess-correct',
         'guess-wrong',
         'game-over',
+        'back-to-lobby',
       ]
       if (gameMsgTypes.includes(msg.type)) applyGameMsg(msg)
     })
@@ -725,6 +741,11 @@ export default function CardCategories() {
     setSearchOpen(false)
   }
 
+  const handleResign = () => {
+    if (isHostRef.current) hostHandleWrong(myPeerIdRef.current, null, null)
+    else hostConnRef.current?.send({ type: 'resign' } satisfies ToHostMsg)
+  }
+
   function resetToLobby() {
     clearTurnTimer()
     peerRef.current?.destroy()
@@ -747,6 +768,26 @@ export default function CardCategories() {
     setSoloScore(0)
     setSoloRoundWon(false)
     setScoreEntrySeen(false)
+  }
+
+  // Returns to the room lobby without destroying connections — multiplayer only.
+  function backToRoom() {
+    clearTurnTimer()
+    gameStateRef.current = INIT_GAME_STATE
+    setGameState(INIT_GAME_STATE)
+    hostGameRef.current = {
+      activePlayers: [],
+      playerOrder: [],
+      leaderIdx: 0,
+      guesserOrder: [],
+      guesserIdx: 0,
+      usedCardIds: new Set(),
+    }
+    setTurnDeadline(null)
+    setSearchQuery('')
+    setSearchOpen(false)
+    broadcast({ type: 'back-to-lobby' })
+    setLobbyPhase('room')
   }
 
   // ── Render helpers ────────────────────────────────────────────────────────────
@@ -805,7 +846,10 @@ export default function CardCategories() {
           className="pvp-lobby__form"
           onSubmit={(e) => {
             e.preventDefault()
-            if (name.trim()) handleHostMultiplayer()
+            if (name.trim()) {
+              localStorage.setItem('cc-player-name', name.trim())
+              handleHostMultiplayer()
+            }
           }}
         >
           <label className="pvp-lobby__label" htmlFor="cc-name">
@@ -1004,9 +1048,13 @@ export default function CardCategories() {
             </div>
           ))}
         </div>
-        <button className="hol-btn" onClick={resetToLobby}>
-          Play Again
-        </button>
+        {isSolo ? (
+          <button className="hol-btn" onClick={resetToLobby}>Play Again</button>
+        ) : isHost ? (
+          <button className="hol-btn" onClick={backToRoom}>Play Again</button>
+        ) : (
+          <p className="pvp-lobby__hint">Waiting for host to restart…</p>
+        )}
       </div>
     )
   } else if (gs.phase === 'category-selection') {
@@ -1063,16 +1111,23 @@ export default function CardCategories() {
             Score: <strong>{soloScore}</strong> &nbsp;·&nbsp; {gs.correctGuesses.length}/3 guessed
           </p>
         ) : (
-          <p className="cc-game__status">
-            {iAmGuesser
-              ? 'Your turn — type a card name below!'
-              : `Waiting for ${playerNameForRender(currentGuesserPeerId ?? '')}…`}
-            {secondsLeft !== null && (
-              <span className={`cc-turn-timer${secondsLeft <= 10 ? ' cc-turn-timer--urgent' : ''}`}>
-                {secondsLeft}s
-              </span>
+          <div className="cc-game__status-row">
+            <p className="cc-game__status">
+              {iAmGuesser
+                ? 'Your turn — type a card name below!'
+                : `Waiting for ${playerNameForRender(currentGuesserPeerId ?? '')}…`}
+              {secondsLeft !== null && (
+                <span className={`cc-turn-timer${secondsLeft <= 10 ? ' cc-turn-timer--urgent' : ''}`}>
+                  {secondsLeft}s
+                </span>
+              )}
+            </p>
+            {iAmGuesser && (
+              <button className="cc-resign-btn" onClick={handleResign} title="Forfeit your turn">
+                Resign turn
+              </button>
             )}
-          </p>
+          </div>
         )}
       </div>
       {secondsLeft !== null && (

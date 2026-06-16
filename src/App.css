@@ -1295,6 +1295,28 @@
   gap: 0.625rem;
 }
 
+.cc-game__status-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.cc-resign-btn {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.cc-resign-btn:hover {
+  background: var(--surface-alt, rgba(255,255,255,0.06));
+  color: var(--text);
+}
+
 .cc-turn-timer {
   font-size: 0.85rem;
   font-weight: 700;

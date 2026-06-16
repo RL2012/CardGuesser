@@ -60,8 +60,8 @@ Never commit a lock file produced by `npm install --legacy-peer-deps` — it cau
 
 **PvP networking** (`src/components/card-categories/`): Star topology — the first player to enter a name becomes host; others connect peer-to-peer to the host's peer ID. The host relays all messages (`ToClientMsg`) to other clients. Non-hosts send `ToHostMsg` only to the host.
 
-- **`CardCategories.tsx`** — Main component: lobby, game state, host game logic, network event wiring. Manages connection state with refs (not Redux) to avoid stale closure issues. In multiplayer, the host runs a 60-second per-turn `setTimeout`; expiry calls `hostHandleWrong` (same as a wrong guess). Clients receive a `turnDeadline` timestamp in `guessing-start`/`guess-correct` messages and render a countdown bar. When the host disconnects, guests are automatically redirected to the setup screen with an error message.
-- **`network.ts`** — Network constants: `ICE_SERVERS` (metered.ca TURN credentials), `MAX_PLAYERS`, message types (`ToHostMsg` / `ToClientMsg`).
+- **`CardCategories.tsx`** — Main component: lobby, game state, host game logic, network event wiring. Manages connection state with refs (not Redux) to avoid stale closure issues. In multiplayer, the host runs a 60-second per-turn `setTimeout`; expiry calls `hostHandleWrong` (same as a wrong guess). Clients receive a `turnDeadline` timestamp in `guessing-start`/`guess-correct` messages and render a countdown bar. When the host disconnects, guests are redirected to setup with an error message. After game-over, the host sends `back-to-lobby` to return everyone to the room without destroying connections. The category picker (leader) always guesses first. The current guesser can press "Resign turn" to forfeit (costs a life). Player name is persisted to `localStorage` (`cc-player-name`) so it pre-fills on next visit.
+- **`network.ts`** — Network constants: `ICE_SERVERS` (metered.ca TURN credentials), `MAX_PLAYERS`, message types (`ToHostMsg` / `ToClientMsg`). `ToHostMsg` includes `resign`; `ToClientMsg` includes `back-to-lobby`.
 - **`categoryUtils.ts`** — Category generation (`generateCategories`) and card matching logic (`cardMatchesCategory`).
 - **`LocalTransport.ts`** — WebSocket-based transport for localhost multiplayer. Replaces PeerJS/WebRTC on localhost because Firefox isolates mDNS ICE candidates between normal + private browsing contexts and may block STUN/TURN via Enhanced Tracking Protection. Firefox also partitions BroadcastChannel between normal/private tabs, so a WebSocket relay server (`scripts/relay-server.mjs`, started alongside Vite via `npm run dev`) is used instead. Not used in production (GitHub Pages uses real PeerJS with TURN relays).
 
@@ -71,7 +71,13 @@ Never commit a lock file produced by `npm install --legacy-peer-deps` — it cau
 
 **Deployment:** GitHub Actions (`deploy.yml`) builds on push to `main` and deploys `dist/` to GitHub Pages. Vite base is `/CardGuesser/`.
 
-**Typed hooks:** `src/hooks.ts` exports `useAppDispatch` and `useAppSelector` — always use these instead of the raw Redux hooks.
+**Typed hooks:** `src/hooks/hooks.ts` exports `useAppDispatch` and `useAppSelector` — always use these instead of the raw Redux hooks.
+
+**Shared utilities and types:**
+- `src/hooks/hooks.ts` — typed Redux hooks (`useAppDispatch`, `useAppSelector`)
+- `src/types/types.ts` — shared TypeScript types (`Card`, `CardSet`)
+- `src/utils/utils.ts` — shared utility functions (`getRandomCard`, `formatTime`, `randomCrop`, `preloadImages`)
+- `src/services/leaderboard.ts` — localStorage leaderboard service (`getLeaderboard`, `addScore`; also exports `LeaderboardEntry` and `GameKey` types)
 
 ## README maintenance
 
@@ -80,3 +86,26 @@ Update `README.md` before or as part of every commit. If a commit adds a game mo
 ## Cross-file sync
 
 `CLAUDE.md` and `DEEPSEEK.md` must be kept in sync. After every code change, update both files to reflect the new state of the project (new files, changed architecture, new commands, etc.). The content should be identical except for the heading and any AI-specific notes.
+
+## Global CLAUDE.md propagation
+
+The global orchestrator context lives at `C:\Users\milyu\source\repos\CLAUDE.md`. It contains the authoritative per-repo summary that cross-repo sessions and subagents read to understand this project.
+
+After any significant change in this repo, **also update the `### CardGuesser` section in that global file** so it stays accurate.
+
+### What counts as a significant change
+
+Update the global `CLAUDE.md` when you:
+- Add, remove, or rename a major game mode or feature
+- Add, remove, or upgrade a key dependency (new major library, framework version bump)
+- Change a build command, script name, or dev workflow step
+- Change the card data source, its format, or the external API integration
+- Rename key files listed in the global file, or restructure top-level directories
+- Change the deployment process or GitHub Actions workflow
+- Add or remove a top-level npm script
+
+**Do not** update the global file for routine bug fixes, minor refactors, style tweaks, or anything that doesn't affect how an agent unfamiliar with the repo should approach working in it.
+
+### What to update
+
+Find the `### CardGuesser` section in `C:\Users\milyu\source\repos\CLAUDE.md` and update whichever parts accurately reflect your change: the feature list, the key files table, the stack description, the commands block, or the card data notes.

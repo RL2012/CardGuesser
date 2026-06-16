@@ -1,4 +1,4 @@
-import { getLeaderboard } from '../leaderboard'
+import { getLeaderboard } from '../services/leaderboard'
 
 interface Props {
   onPlay: (game: 'card-guesser' | 'higher-or-lower' | 'card-categories') => void
