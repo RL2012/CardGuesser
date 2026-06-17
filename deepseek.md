@@ -101,7 +101,27 @@ After completing the code changes requested by the user, stage all modified and 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 ```
 
-Never run `git push` unless the user explicitly asks.
+## Git workflow after code changes
+
+After every code change, check whether this session is running on the same machine as the servers:
+
+```powershell
+curl http://localhost:7500/api/health
+```
+
+If this returns JSON with health data, you are **on the server**. Stage, commit, and push automatically:
+
+```powershell
+git add -A
+git commit -m "describe changes made"
+git push
+```
+
+If it fails, you are **on a dev machine**. Stage changes for review but do NOT commit or push:
+
+```powershell
+git add -A
+```
 
 ## Cross-file sync
 
