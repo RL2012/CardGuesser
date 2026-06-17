@@ -119,9 +119,12 @@ const gameSlice = createSlice({
       state.challengeTimeLeft -= 1
       if (state.cardTimeLeft > 0) state.cardTimeLeft -= 1
     },
+    resetGame() {
+      return initialState
+    },
   },
 })
 
-export const { startRound, zoomOut, addWrongGuess, correctGuess, replaceCard, skipCard, tickSecond } =
+export const { startRound, zoomOut, addWrongGuess, correctGuess, replaceCard, skipCard, tickSecond, resetGame } =
   gameSlice.actions
 export default gameSlice.reducer
