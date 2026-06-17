@@ -44,13 +44,13 @@ Never commit a lock file produced by `npm install --legacy-peer-deps` — it cau
 
 **Stack:** React 19 + TypeScript + Vite, Redux Toolkit for game state, Fuse.js for fuzzy search, PeerJS for WebRTC. TypeScript target is ES2022 with `verbatimModuleSyntax` and `erasableSyntaxOnly` enabled (matches YgoDomainBuilder reference config).
 
-**Card data loading** (`src/store/cardsSlice.ts`): On startup `App.tsx` dispatches `fetchCards`, which tries `GET /cards.txt` (a pre-generated pipe-delimited flat file) and falls back to the live ygoprodeck API. All game modes gate rendering behind `status === 'succeeded'`. Card images are loaded from `images.ygoprodeck.com/{id}.jpg` (external CDN, not bundled). The `public/cards.txt` format is `id|name|frameType|type|attribute|atk|def|level|race|archetype|sets(JSON)|banTcg|views|viewsWeek|tcgDate` (15 pipe-delimited columns) — regenerated via `npm run fetch-cards`.
+**Card data loading** (`src/store/cardsSlice.ts`): On startup `App.tsx` dispatches `fetchCards`, which tries `GET /cards.txt` (a pre-generated pipe-delimited flat file) and falls back to the live ygoprodeck API. All game modes gate rendering behind `status === 'succeeded'`. Card images are loaded from `images.ygoprodeck.com/{id}.jpg` (external CDN, not bundled). The `public/cards.txt` format is `id|name|frameType|type|attribute|atk|def|level|race|archetype|sets(JSON)|banTcg|views|viewsWeek|tcgDate|tcgplayerPrice` (16 pipe-delimited columns) — regenerated via `npm run fetch-cards`. Column 15 (`tcgplayerPrice`) comes from `card_prices[0].tcgplayer_price` in the YGOProDeck API; cards with a missing or zero price are excluded from Price Check mode.
 
 **Redux store** (`src/store/`):
 
 - `cards` — shared card list, loaded once at startup
 - `game` — Card Guesser state: current card, crop position (`cropX`/`cropY` as 0–1 fractions), zoom level (5 = most zoomed, 1 = full card), timers, scores, round history
-- `higherOrLower` — separate slice for Higher or Lower mode
+- `higherOrLower` — Higher or Lower state; includes `mode: 'atk' | 'price'` — ATK Battle compares monster ATK, Price Check compares TCGPlayer prices (cards with price = 0 are excluded)
 
 **Game modes** are tab-switched in `App.tsx`; each is a self-contained component tree:
 
