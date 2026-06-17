@@ -3,6 +3,7 @@ export interface CardSet {
   setCode: string
   setRarity: string
   setPrice: string
+  setEdition?: string
 }
 
 export interface Card {

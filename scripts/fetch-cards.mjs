@@ -6,7 +6,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const CARDS_TXT = join(__dirname, '..', 'public', 'cards.txt')
 
 console.log('Fetching card data from YGOPRODeck…')
-const res = await fetch('https://db.ygoprodeck.com/api/v7/cardinfo.php?misc=yes')
+const res = await fetch('https://db.ygoprodeck.com/api/v7/cardinfo.php?misc=yes&tcgplayer_data=true')
 if (!res.ok) {
   console.error(`API error: ${res.status} ${res.statusText}`)
   process.exit(1)
@@ -22,6 +22,7 @@ const lines = data.map((c) => {
     setCode: s.set_code,
     setRarity: s.set_rarity,
     setPrice: s.set_price,
+    setEdition: s.set_edition ?? '',
   }))
   const tcgplayerPrice = c.card_prices?.[0]?.tcgplayer_price ?? ''
   return [

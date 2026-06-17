@@ -2,13 +2,14 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import type { Card, CardSet } from '../types/types'
 import { applyDataFix } from '../utils/dataFixes'
 
-const YGOPRO_API = 'https://db.ygoprodeck.com/api/v7/cardinfo.php?misc=yes'
+const YGOPRO_API = 'https://db.ygoprodeck.com/api/v7/cardinfo.php?misc=yes&tcgplayer_data=true'
 
 interface YgoCardSet {
   set_name: string
   set_code: string
   set_rarity: string
   set_price: string
+  set_edition?: string
 }
 
 interface YgoMiscInfo {
@@ -115,6 +116,7 @@ function mapYgoCard(c: YgoCard): Card {
       setCode: s.set_code,
       setRarity: s.set_rarity,
       setPrice: s.set_price,
+      setEdition: s.set_edition ?? '',
     })),
     banTcg: c.banlist_info?.ban_tcg ?? null,
     views: misc?.views ?? 0,

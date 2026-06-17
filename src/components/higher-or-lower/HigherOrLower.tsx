@@ -152,7 +152,10 @@ export default function HigherOrLower() {
                 <div className="hol-card-info">
                   <p className="hol-card-name">{leftCard.name}</p>
                   {mode === 'price' && leftCardSet && (
-                    <p className="hol-card-set">{leftCardSet.setName} · {leftCardSet.setRarity}</p>
+                    <p className="hol-card-set">
+                      {leftCardSet.setName} · {leftCardSet.setRarity}
+                      {leftCardSet.setEdition ? ` · ${leftCardSet.setEdition}` : ''}
+                    </p>
                   )}
                   <p className="hol-card-atk">
                     {mode === 'price' && leftCardSet
@@ -173,7 +176,10 @@ export default function HigherOrLower() {
                 <div className="hol-card-info">
                   <p className="hol-card-name">{rightCard.name}</p>
                   {mode === 'price' && rightCardSet && (
-                    <p className="hol-card-set">{rightCardSet.setName} · {rightCardSet.setRarity}</p>
+                    <p className="hol-card-set">
+                      {rightCardSet.setName} · {rightCardSet.setRarity}
+                      {rightCardSet.setEdition ? ` · ${rightCardSet.setEdition}` : ''}
+                    </p>
                   )}
                   <p className="hol-card-atk">
                     {mode === 'price' && rightCardSet
@@ -228,7 +234,10 @@ export default function HigherOrLower() {
               <>
                 <p className="hol-card-name">{leftCard.name}</p>
                 {mode === 'price' && leftCardSet && (
-                  <p className="hol-card-set">{leftCardSet.setName} · {leftCardSet.setRarity}</p>
+                  <p className="hol-card-set">
+                    {leftCardSet.setName} · {leftCardSet.setRarity}
+                    {leftCardSet.setEdition ? ` · ${leftCardSet.setEdition}` : ''}
+                  </p>
                 )}
                 <p className="hol-card-atk">
                   {mode === 'price' && leftCardSet
@@ -241,7 +250,10 @@ export default function HigherOrLower() {
                 {mode === 'price' && leftCardSet && (
                   <>
                     <p className="hol-card-set">{leftCardSet.setName}</p>
-                    <p className="hol-card-set hol-card-set--rarity">{leftCardSet.setRarity}</p>
+                    <p className="hol-card-set hol-card-set--rarity">
+                      {leftCardSet.setRarity}
+                      {leftCardSet.setEdition ? ` · ${leftCardSet.setEdition}` : ''}
+                    </p>
                   </>
                 )}
                 <p className="hol-card-hint">◀ Higher Price</p>
@@ -275,7 +287,10 @@ export default function HigherOrLower() {
               <>
                 <p className="hol-card-name">{rightCard.name}</p>
                 {mode === 'price' && rightCardSet && (
-                  <p className="hol-card-set">{rightCardSet.setName} · {rightCardSet.setRarity}</p>
+                  <p className="hol-card-set">
+                    {rightCardSet.setName} · {rightCardSet.setRarity}
+                    {rightCardSet.setEdition ? ` · ${rightCardSet.setEdition}` : ''}
+                  </p>
                 )}
                 <p className="hol-card-atk">
                   {mode === 'price' && rightCardSet
@@ -288,7 +303,10 @@ export default function HigherOrLower() {
                 {mode === 'price' && rightCardSet && (
                   <>
                     <p className="hol-card-set">{rightCardSet.setName}</p>
-                    <p className="hol-card-set hol-card-set--rarity">{rightCardSet.setRarity}</p>
+                    <p className="hol-card-set hol-card-set--rarity">
+                      {rightCardSet.setRarity}
+                      {rightCardSet.setEdition ? ` · ${rightCardSet.setEdition}` : ''}
+                    </p>
                   </>
                 )}
                 <p className="hol-card-hint">Higher Price ▶</p>
