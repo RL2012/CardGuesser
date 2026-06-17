@@ -79,13 +79,23 @@ Never commit a lock file produced by `npm install --legacy-peer-deps` — it cau
 - `src/utils/utils.ts` — shared utility functions (`getRandomCard`, `formatTime`, `randomCrop`, `preloadImages`)
 - `src/services/leaderboard.ts` — localStorage leaderboard service (`getLeaderboard`, `addScore`; also exports `LeaderboardEntry` and `GameKey` types)
 
+## Committing changes
+
+After completing the code changes requested by the user, stage all modified and new files and commit with a descriptive message. The subject line must be ≤ 70 characters and explain *what* changed and *why* — not just which files were touched. Always include the co-author trailer:
+
+```
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+```
+
+Never run `git push` unless the user explicitly asks.
+
 ## Cross-file sync
 
 `CLAUDE.md` and `deepseek.md` must be kept in sync. After every code change, update both files to reflect the new state of the project (new files, changed architecture, new commands, etc.). The content should be identical except for the heading and any AI-specific notes.
 
-## Global CLAUDE.md / DEEPSEEK.md propagation
+## Global CLAUDE.md / deepseek.md propagation
 
-The global orchestrator context lives at `C:\Users\milyu\source\repos\CLAUDE.md` and `C:\Users\milyu\source\repos\DEEPSEEK.md`. These contain the authoritative per-repo summary that cross-repo sessions and subagents read to understand this project.
+The global orchestrator context lives at `C:\Users\milyu\source\repos\CLAUDE.md` and `C:\Users\milyu\source\repos\deepseek.md`. These contain the authoritative per-repo summary that cross-repo sessions and subagents read to understand this project.
 
 After any significant change in this repo, **also update the `### CardGuesser` section in both global files** so they stay accurate.
 
@@ -104,4 +114,4 @@ Update the global files when you:
 
 ### What to update
 
-Find the `### CardGuesser` section in `C:\Users\milyu\source\repos\CLAUDE.md` (and `DEEPSEEK.md`) and update whichever parts accurately reflect your change: the feature list, the key files table, the stack description, the commands block, or the card data notes.
+Find the `### CardGuesser` section in `C:\Users\milyu\source\repos\CLAUDE.md` (and `deepseek.md`) and update whichever parts accurately reflect your change: the feature list, the key files table, the stack description, the commands block, or the card data notes.
