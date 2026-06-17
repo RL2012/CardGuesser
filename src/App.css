@@ -1777,15 +1777,15 @@
 .cn-board {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(5, 1fr);
   gap: 8px;
   padding: 1rem;
   flex: 1;
-  align-content: start;
-  overflow-y: auto;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .cn-cell {
-  aspect-ratio: 2 / 1;
   border-radius: 8px;
   border: 2px solid var(--border);
   background: var(--surface);

@@ -448,33 +448,6 @@ export default function Codenames(): ReactElement {
 
   // ── UI handlers ────────────────────────────────────────────────────────────────
 
-  function handleHost() {
-    myNameRef.current = name.trim()
-    isHostRef.current = true
-    setIsHost(true)
-    const isLocalDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const peer: any = isLocalDev ? createLocalPeer() : new Peer({ config: { iceServers: ICE_SERVERS } })
-    peerRef.current = peer
-    peer.on('open', (id: string) => {
-      myPeerIdRef.current = id
-      setMyPeerId(id)
-      // Add host to players
-      const hostPlayer = hostAssignPlayer(id, name.trim())
-      upsertPlayer(hostPlayer)
-      setLobbyPhase('lobby')
-    })
-    peer.on('connection', (conn: AnyDataConnection | LocalConnection) => {
-      if (!isHostRef.current || clientConnsRef.current.size >= MAX_PLAYERS_CN - 1) {
-        conn.close()
-        return
-      }
-      wireClientConn(conn as AnyDataConnection)
-      setLobbyPhase('room')
-    })
-    peer.on('error', (err: Error) => setPeerError(err.message))
-  }
-
   function handleJoin(e: React.FormEvent) {
     e.preventDefault()
     const id = joinId.trim()
@@ -482,6 +455,8 @@ export default function Codenames(): ReactElement {
     setPeerError(null)
     isHostRef.current = false
     setIsHost(false)
+    playersRef.current = []
+    setPlayers([])
     wireHostConn(peerRef.current.connect(id))
     setLobbyPhase('room')
   }
@@ -616,7 +591,8 @@ export default function Codenames(): ReactElement {
       if (!n) return
       localStorage.setItem(STORAGE_KEY, n)
       myNameRef.current = n
-      // Create peer so we have an ID ready for both hosting and joining
+      isHostRef.current = true
+      setIsHost(true)
       const isLocalDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const peer: any = isLocalDev ? createLocalPeer() : new Peer({ config: { iceServers: ICE_SERVERS } })
@@ -624,6 +600,16 @@ export default function Codenames(): ReactElement {
       peer.on('open', (id: string) => {
         myPeerIdRef.current = id
         setMyPeerId(id)
+        const hostPlayer = hostAssignPlayer(id, n)
+        upsertPlayer(hostPlayer)
+      })
+      peer.on('connection', (conn: AnyDataConnection | LocalConnection) => {
+        if (!isHostRef.current || clientConnsRef.current.size >= MAX_PLAYERS_CN - 1) {
+          conn.close()
+          return
+        }
+        wireClientConn(conn as AnyDataConnection)
+        setLobbyPhase('room')
       })
       peer.on('error', (err: Error) => setPeerError(err.message))
       setLobbyPhase('lobby')
@@ -670,8 +656,6 @@ export default function Codenames(): ReactElement {
                 </button>
               </div>
             </section>
-            <button className="hol-btn" onClick={handleHost}>Host Game</button>
-            <div className="pvp-lobby__divider">or</div>
             <section className="pvp-lobby__section">
               <form onSubmit={handleJoin}>
                 <p className="pvp-lobby__label">Join a game:</p>
