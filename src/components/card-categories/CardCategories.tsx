@@ -112,6 +112,7 @@ export default function CardCategories() {
   const chatEndRef = useRef<HTMLDivElement | null>(null)
   const cardsRef = useRef(cards)
   const gameStateRef = useRef<GameState>(INIT_GAME_STATE)
+  const inGameRef = useRef(false)
   const turnTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [, setCountdownTick] = useState(0)
 
@@ -306,7 +307,7 @@ export default function CardCategories() {
         phase: 'guessing',
         selectedCategory: msg.category,
         guesserOrder: msg.guesserOrder,
-        currentGuesserIdx: 0,
+        currentGuesserIdx: msg.currentGuesserIdx ?? 0,
         turnDuration: msg.turnDuration ?? next.turnDuration,
       }
       setSearchQuery('')
@@ -347,6 +348,7 @@ export default function CardCategories() {
       next = { ...next, drawFlash: true }
       setTurnDeadline(null)
     } else if (msg.type === 'game-over') {
+      inGameRef.current = false
       next = { ...next, phase: 'game-over', winner: msg.winner, prevRoundInfo: msg.prevRoundInfo ?? null }
       setTurnDeadline(null)
     } else {
@@ -374,6 +376,7 @@ export default function CardCategories() {
     }
     gameStateRef.current = { ...INIT_GAME_STATE, lives }
     setGameState(gameStateRef.current)
+    inGameRef.current = true
     broadcast({ type: 'game-start' })
     setLobbyPhase('game')
     hostStartRound()
@@ -607,14 +610,43 @@ export default function CardCategories() {
 
       if (msg.type === 'hello') {
         const hostInfo: PlayerInfo = { peerId: myPeerIdRef.current, name: myNameRef.current }
-        conn.send({
-          type: 'player-list',
-          players: [hostInfo, ...playersRef.current],
-        } satisfies ToClientMsg)
         const player: PlayerInfo = { peerId: msg.peerId, name: msg.name }
         addPlayer(player)
-        broadcast({ type: 'player-joined', player } satisfies ToClientMsg, conn.peer)
-        addChat({ name: '', text: `${msg.name} joined the room.`, self: false })
+
+        if (inGameRef.current) {
+          // Mid-game join: give 0 lives so they spectate until next game
+          const gs = gameStateRef.current
+          const newLives = { ...gs.lives, [msg.peerId]: 0 }
+          const updatedGs = { ...gs, lives: newLives }
+          gameStateRef.current = updatedGs
+          setGameState(updatedGs)
+
+          conn.send({ type: 'player-list', players: [hostInfo, ...playersRef.current] } satisfies ToClientMsg)
+          conn.send({ type: 'game-start' } satisfies ToClientMsg)
+          conn.send({
+            type: 'round-start',
+            leader: updatedGs.currentLeader ?? '',
+            categories: updatedGs.categories,
+            lives: updatedGs.lives,
+            prevRoundInfo: updatedGs.prevRoundInfo ?? undefined,
+          } satisfies ToClientMsg)
+          if (updatedGs.phase === 'guessing' && updatedGs.selectedCategory) {
+            conn.send({
+              type: 'guessing-start',
+              category: updatedGs.selectedCategory,
+              guesserOrder: updatedGs.guesserOrder,
+              currentGuesserIdx: updatedGs.currentGuesserIdx,
+              turnDuration: updatedGs.turnDuration,
+            } satisfies ToClientMsg)
+          }
+
+          broadcast({ type: 'player-joined', player, lives: newLives } satisfies ToClientMsg, conn.peer)
+          addChat({ name: '', text: `${msg.name} joined mid-game (spectating).`, self: false })
+        } else {
+          conn.send({ type: 'player-list', players: [hostInfo, ...playersRef.current] } satisfies ToClientMsg)
+          broadcast({ type: 'player-joined', player } satisfies ToClientMsg, conn.peer)
+          addChat({ name: '', text: `${msg.name} joined the room.`, self: false })
+        }
       }
       if (msg.type === 'chat') {
         broadcast({ type: 'chat', name: msg.name, text: msg.text } satisfies ToClientMsg, conn.peer)
@@ -702,6 +734,11 @@ export default function CardCategories() {
       if (msg.type === 'player-joined') {
         addPlayer(msg.player)
         addChat({ name: '', text: `${msg.player.name} joined.`, self: false })
+        if (msg.lives) {
+          const next = { ...gameStateRef.current, lives: msg.lives }
+          gameStateRef.current = next
+          setGameState(next)
+        }
       }
       if (msg.type === 'player-left') {
         removePlayer(msg.peerId)
@@ -761,7 +798,7 @@ export default function CardCategories() {
         return
       }
       wireClientConn(conn)
-      setLobbyPhase('room')
+      if (!inGameRef.current) setLobbyPhase('room')
     })
     peer.on('error', (err: Error) => setPeerError(err.message))
   }
@@ -815,6 +852,7 @@ export default function CardCategories() {
 
   function resetToLobby() {
     clearTurnTimer()
+    inGameRef.current = false
     peerRef.current?.destroy()
     peerRef.current = null
     hostConnRef.current = null
@@ -840,6 +878,7 @@ export default function CardCategories() {
   // Returns to the room lobby without destroying connections — multiplayer only.
   function backToRoom() {
     clearTurnTimer()
+    inGameRef.current = false
     gameStateRef.current = INIT_GAME_STATE
     setGameState(INIT_GAME_STATE)
     hostGameRef.current = {

@@ -42,7 +42,7 @@ export type ToClientMsg =
   | { type: 'player-updated'; peerId: string; team: Team; isSpymaster: boolean }
   | { type: 'chat'; name: string; text: string }
   | { type: 'game-started'; board: BoardCell[]; activeTeam: Team; redTotal: number; blueTotal: number }
-  | { type: 'clue-given'; word: string; count: number }
+  | { type: 'clue-given'; word: string; count: number; guessesLeft?: number }
   | { type: 'card-revealed'; index: number; cellTeam: CellTeam; guessesLeft: number; redRemaining: number; blueRemaining: number }
   | { type: 'turn-ended'; activeTeam: Team }
   | { type: 'game-over'; winner: Team; reason: 'found-all' | 'assassin' }

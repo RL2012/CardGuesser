@@ -41,8 +41,8 @@ const initialState: GameState = {
   wrongGuesses: [],
   previousRounds: [],
   totalPoints: 0,
-  cardTimeLeft: 60,
-  challengeTimeLeft: 900,
+  cardTimeLeft: 30,
+  challengeTimeLeft: 300,
   isActive: false,
 }
 
@@ -56,7 +56,7 @@ const gameSlice = createSlice({
       state.cropY = action.payload.cropY
       state.zoomLevel = 5
       state.wrongGuesses = []
-      state.cardTimeLeft = 60
+      state.cardTimeLeft = 30
       state.isActive = true
     },
     zoomOut(state) {
@@ -84,7 +84,7 @@ const gameSlice = createSlice({
       state.cropY = action.payload.cropY
       state.zoomLevel = 5
       state.wrongGuesses = []
-      state.cardTimeLeft = 60
+      state.cardTimeLeft = 30
     },
     replaceCard(state, action: PayloadAction<RoundPayload>) {
       state.currentCard = action.payload.card
@@ -92,7 +92,7 @@ const gameSlice = createSlice({
       state.cropY = action.payload.cropY
       state.zoomLevel = 5
       state.wrongGuesses = []
-      state.cardTimeLeft = 60
+      state.cardTimeLeft = 30
     },
     skipCard(state, action: PayloadAction<AdvancePayload>) {
       if (state.currentCard) {
@@ -108,7 +108,7 @@ const gameSlice = createSlice({
       state.cropY = action.payload.cropY
       state.zoomLevel = 5
       state.wrongGuesses = []
-      state.cardTimeLeft = 60
+      state.cardTimeLeft = 30
     },
     tickSecond(state) {
       if (!state.isActive) return

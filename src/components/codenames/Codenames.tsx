@@ -87,6 +87,7 @@ export default function Codenames(): ReactElement {
   const hostConnRef = useRef<AnyDataConnection | null>(null)
   const playersRef = useRef<CodenamesPlayer[]>([])
   const gameStateRef = useRef<GameState>(INIT_GAME)
+  const inGameRef = useRef(false)
   const cardsRef = useRef(cards)
   const chatEndRef = useRef<HTMLDivElement | null>(null)
 
@@ -185,6 +186,7 @@ export default function Codenames(): ReactElement {
     }
     gameStateRef.current = gs
     setGameState(gs)
+    inGameRef.current = true
     broadcast({ type: 'game-started', board, activeTeam: 'red', redTotal, blueTotal })
     setLobbyPhase('game')
   }
@@ -309,7 +311,7 @@ export default function Codenames(): ReactElement {
       return
     }
     if (msg.type === 'clue-given') {
-      const next: GameState = { ...gs, phase: 'guessing', currentClueWord: msg.word, currentClueCount: msg.count, guessesLeft: msg.count + 1 }
+      const next: GameState = { ...gs, phase: 'guessing', currentClueWord: msg.word, currentClueCount: msg.count, guessesLeft: msg.guessesLeft ?? msg.count + 1 }
       gameStateRef.current = next
       setGameState(next)
       return
@@ -346,6 +348,7 @@ export default function Codenames(): ReactElement {
   // ── Reset helpers (declared before wiring callbacks to avoid hoisting lint errors) ──
 
   function resetToSetup() {
+    inGameRef.current = false
     peerRef.current?.destroy()
     peerRef.current = null
     hostConnRef.current = null
@@ -377,7 +380,29 @@ export default function Codenames(): ReactElement {
         upsertPlayer(newPlayer)
         conn.send({ type: 'welcome', players: playersRef.current } satisfies ToClientMsg)
         broadcast({ type: 'player-joined', player: newPlayer } satisfies ToClientMsg, conn.peer)
-        addChat({ name: '', text: `${msg.name} joined the room.`, self: false })
+
+        if (inGameRef.current) {
+          // Mid-game join: sync current board and clue state
+          const gs = gameStateRef.current
+          addChat({ name: '', text: `${msg.name} joined mid-game.`, self: false })
+          conn.send({
+            type: 'game-started',
+            board: gs.board,
+            activeTeam: gs.activeTeam,
+            redTotal: gs.redRemaining,
+            blueTotal: gs.blueRemaining,
+          } satisfies ToClientMsg)
+          if (gs.phase === 'guessing' && gs.currentClueWord) {
+            conn.send({
+              type: 'clue-given',
+              word: gs.currentClueWord,
+              count: gs.currentClueCount,
+              guessesLeft: gs.guessesLeft,
+            } satisfies ToClientMsg)
+          }
+        } else {
+          addChat({ name: '', text: `${msg.name} joined the room.`, self: false })
+        }
       }
       if (msg.type === 'pick-team') {
         hostPickTeam(conn.peer, msg.team)
@@ -533,6 +558,7 @@ export default function Codenames(): ReactElement {
   }
 
   function handleBackToLobby() {
+    inGameRef.current = false
     gameStateRef.current = INIT_GAME
     setGameState(INIT_GAME)
     setClueInput('')
@@ -609,7 +635,7 @@ export default function Codenames(): ReactElement {
           return
         }
         wireClientConn(conn as AnyDataConnection)
-        setLobbyPhase('room')
+        if (!inGameRef.current) setLobbyPhase('room')
       })
       peer.on('error', (err: Error) => setPeerError(err.message))
       setLobbyPhase('lobby')
