@@ -1,6 +1,5 @@
 import { useRef, useState, useMemo, useCallback, useEffect, type ReactElement } from 'react'
 import Peer from 'peerjs'
-import type { DataConnection } from 'peerjs'
 import Fuse from 'fuse.js'
 import { useAppSelector } from '../../hooks/hooks'
 import ScoreEntry from '../ScoreEntry'
@@ -8,7 +7,6 @@ import { addScore } from '../../services/leaderboard'
 import { generateCategories, cardMatchesCategory } from './categoryUtils'
 import type { Category, GuessRecord } from './categoryUtils'
 import { createLocalPeer } from './LocalTransport'
-import type { LocalConnection } from './LocalTransport'
 import {
   ICE_SERVERS,
   MAX_PLAYERS,
@@ -16,10 +14,8 @@ import {
   type ChatMessage,
   type ToHostMsg,
   type ToClientMsg,
+  type AnyDataConnection,
 } from './network'
-
-// Union type so wireClientConn / wireHostConn accept either transport
-type AnyDataConnection = DataConnection | LocalConnection
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 

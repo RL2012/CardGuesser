@@ -4,10 +4,11 @@ import { fetchCards } from './store/cardsSlice'
 import CardGuesser from './components/card-guesser/CardGuesser'
 import HigherOrLower from './components/higher-or-lower/HigherOrLower'
 import CardCategories from './components/card-categories/CardCategories'
+import Codenames from './components/codenames/Codenames'
 import Homepage from './components/Homepage'
 import './App.css'
 
-type GameMode = 'home' | 'card-guesser' | 'higher-or-lower' | 'card-categories'
+type GameMode = 'home' | 'card-guesser' | 'higher-or-lower' | 'card-categories' | 'codenames'
 
 export default function App() {
   const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark')
@@ -57,11 +58,17 @@ export default function App() {
           >
             Card Categories
           </button>
+          <button
+            className={`game-tab${activeGame === 'codenames' ? ' game-tab--active' : ''}`}
+            onClick={() => setActiveGame('codenames')}
+          >
+            Codenames
+          </button>
         </nav>
       </header>
 
       {activeGame === 'home' && (
-        <Homepage onPlay={(game) => setActiveGame(game)} />
+        <Homepage onPlay={(game) => setActiveGame(game as GameMode)} />
       )}
 
       {activeGame !== 'home' && status === 'loading' && <p className="status-message">Loading cards…</p>}
@@ -74,6 +81,7 @@ export default function App() {
           {activeGame === 'card-guesser' && <CardGuesser />}
           {activeGame === 'higher-or-lower' && <HigherOrLower />}
           {activeGame === 'card-categories' && <CardCategories />}
+          {activeGame === 'codenames' && <Codenames />}
         </>
       )}
     </div>

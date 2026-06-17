@@ -1,16 +1,8 @@
-// ── Network constants & message types (multiplayer-only) ─────────────────────
+// ── Network constants & message types (Card Categories, multiplayer-only) ─────
+
+export { ICE_SERVERS, type PlayerInfo, type AnyDataConnection } from '../../multiplayer/shared'
 
 export const MAX_PLAYERS = 4
-
-export const ICE_SERVERS = [
-  { urls: 'stun:stun.relay.metered.ca:80' },
-  { urls: 'turn:global.relay.metered.ca:80', username: '990207c305e0623bfa241d3c', credential: 'FaaoXWv8/duyAdvu' },
-  { urls: 'turn:global.relay.metered.ca:80?transport=tcp', username: '990207c305e0623bfa241d3c', credential: 'FaaoXWv8/duyAdvu' },
-  { urls: 'turn:global.relay.metered.ca:443', username: '990207c305e0623bfa241d3c', credential: 'FaaoXWv8/duyAdvu' },
-  { urls: 'turn:global.relay.metered.ca:443?transport=tcp', username: '990207c305e0623bfa241d3c', credential: 'FaaoXWv8/duyAdvu' },
-]
-
-export interface PlayerInfo { peerId: string; name: string }
 
 export interface ChatMessage { id: number; name: string; text: string; self: boolean }
 
@@ -24,8 +16,8 @@ export type ToHostMsg =
 
 // Messages sent from the host to all clients
 export type ToClientMsg =
-  | { type: 'player-list'; players: PlayerInfo[] }
-  | { type: 'player-joined'; player: PlayerInfo }
+  | { type: 'player-list'; players: import('../../multiplayer/shared').PlayerInfo[] }
+  | { type: 'player-joined'; player: import('../../multiplayer/shared').PlayerInfo }
   | { type: 'player-left'; peerId: string; name: string }
   | { type: 'chat'; name: string; text: string }
   | { type: 'game-start' }
