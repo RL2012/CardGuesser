@@ -47,3 +47,5 @@ export type ToClientMsg =
   | { type: 'turn-ended'; activeTeam: Team }
   | { type: 'game-over'; winner: Team; reason: 'found-all' | 'assassin' }
   | { type: 'back-to-lobby' }
+  | { type: 'game-in-progress' }
+  | { type: 'player-disconnected-reset'; name: string }

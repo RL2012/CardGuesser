@@ -343,6 +343,16 @@ export default function Codenames(): ReactElement {
       setClueCountInput('1')
       return
     }
+    if (msg.type === 'player-disconnected-reset') {
+      inGameRef.current = false
+      gameStateRef.current = INIT_GAME
+      setGameState(INIT_GAME)
+      setLobbyPhase('room')
+      setClueInput('')
+      setClueCountInput('1')
+      addChat({ name: '', text: `${msg.name} disconnected. The game has been reset.`, self: false })
+      return
+    }
   }
 
   // ── Reset helpers (declared before wiring callbacks to avoid hoisting lint errors) ──
@@ -376,33 +386,16 @@ export default function Codenames(): ReactElement {
     conn.on('data', (raw) => {
       const msg = raw as ToHostMsg
       if (msg.type === 'hello') {
+        if (inGameRef.current) {
+          conn.send({ type: 'game-in-progress' } satisfies ToClientMsg)
+          setTimeout(() => conn.close(), 200)
+          return
+        }
         const newPlayer = hostAssignPlayer(conn.peer, msg.name)
         upsertPlayer(newPlayer)
         conn.send({ type: 'welcome', players: playersRef.current } satisfies ToClientMsg)
         broadcast({ type: 'player-joined', player: newPlayer } satisfies ToClientMsg, conn.peer)
-
-        if (inGameRef.current) {
-          // Mid-game join: sync current board and clue state
-          const gs = gameStateRef.current
-          addChat({ name: '', text: `${msg.name} joined mid-game.`, self: false })
-          conn.send({
-            type: 'game-started',
-            board: gs.board,
-            activeTeam: gs.activeTeam,
-            redTotal: gs.redRemaining,
-            blueTotal: gs.blueRemaining,
-          } satisfies ToClientMsg)
-          if (gs.phase === 'guessing' && gs.currentClueWord) {
-            conn.send({
-              type: 'clue-given',
-              word: gs.currentClueWord,
-              count: gs.currentClueCount,
-              guessesLeft: gs.guessesLeft,
-            } satisfies ToClientMsg)
-          }
-        } else {
-          addChat({ name: '', text: `${msg.name} joined the room.`, self: false })
-        }
+        addChat({ name: '', text: `${msg.name} joined the room.`, self: false })
       }
       if (msg.type === 'pick-team') {
         hostPickTeam(conn.peer, msg.team)
@@ -434,8 +427,17 @@ export default function Codenames(): ReactElement {
       clientConnsRef.current.delete(conn.peer)
       removePlayer(conn.peer)
       if (leaving) {
-        broadcast({ type: 'player-left', peerId: conn.peer, name: leaving.name } satisfies ToClientMsg)
-        addChat({ name: '', text: `${leaving.name} left the room.`, self: false })
+        if (inGameRef.current) {
+          inGameRef.current = false
+          gameStateRef.current = INIT_GAME
+          setGameState(INIT_GAME)
+          setLobbyPhase('room')
+          broadcast({ type: 'player-disconnected-reset', name: leaving.name } satisfies ToClientMsg)
+          addChat({ name: '', text: `${leaving.name} disconnected. The game has been reset.`, self: false })
+        } else {
+          broadcast({ type: 'player-left', peerId: conn.peer, name: leaving.name } satisfies ToClientMsg)
+          addChat({ name: '', text: `${leaving.name} left the room.`, self: false })
+        }
       }
     })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -444,6 +446,7 @@ export default function Codenames(): ReactElement {
 
   const wireHostConn = useCallback((conn: AnyDataConnection) => {
     hostConnRef.current = conn
+    let rejectedReason: string | null = null
     const connTimeout = setTimeout(() => {
       if (conn.open === false && (conn as DataConnection).peerConnection?.connectionState !== 'connected') {
         setPeerError('Connection timed out. Check the host code and try again.')
@@ -457,10 +460,22 @@ export default function Codenames(): ReactElement {
     })
     conn.on('data', (raw) => {
       const msg = raw as ToClientMsg
+      if (msg.type === 'game-in-progress') {
+        rejectedReason = 'That game is already in progress.'
+        return
+      }
       applyMsg(msg)
     })
     conn.on('close', () => {
       clearTimeout(connTimeout)
+      if (rejectedReason) {
+        hostConnRef.current = null
+        isHostRef.current = true
+        setIsHost(true)
+        setLobbyPhase('lobby')
+        setPeerError(rejectedReason)
+        return
+      }
       resetToSetup()
       setPeerError('The host disconnected.')
     })
@@ -547,10 +562,15 @@ export default function Codenames(): ReactElement {
 
   function handleStartGame() {
     if (!isHostRef.current) return
+    const total = playersRef.current.length
+    if (total < 4 || total % 2 !== 0) {
+      setPeerError('Need at least 4 players and an even number to start.')
+      return
+    }
     const reds = playersRef.current.filter((p) => p.team === 'red')
     const blues = playersRef.current.filter((p) => p.team === 'blue')
     if (reds.length === 0 || blues.length === 0) {
-      setPeerError('Need at least one player on each team.')
+      setPeerError('Need players on both teams to start.')
       return
     }
     setPeerError(null)
@@ -707,7 +727,8 @@ export default function Codenames(): ReactElement {
   if (lobbyPhase === 'room') {
     const reds = players.filter((p) => p.team === 'red')
     const blues = players.filter((p) => p.team === 'blue')
-    const canStart = isHost && reds.length > 0 && blues.length > 0
+    const total = players.length
+    const canStart = isHost && total >= 4 && total % 2 === 0 && reds.length > 0 && blues.length > 0
 
     return (
       <div className="pvp-room" style={{ flexDirection: 'column', maxWidth: 680 }}>
@@ -753,9 +774,17 @@ export default function Codenames(): ReactElement {
           </button>
         )}
         {isHost && (
-          <button className="hol-btn cn-start-btn" disabled={!canStart} onClick={handleStartGame}>
-            Start Game
-          </button>
+          <>
+            <button className="hol-btn cn-start-btn" disabled={!canStart} onClick={handleStartGame}>
+              Start Game
+            </button>
+            {!canStart && (
+              <p className="pvp-lobby__hint" style={{ marginTop: '0.4rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                Need at least 4 players (even number) to start
+                {total > 0 && ` — ${total} player${total !== 1 ? 's' : ''} so far`}
+              </p>
+            )}
+          </>
         )}
         {!isHost && <p className="pvp-lobby__hint">Waiting for host to start…</p>}
 
