@@ -553,6 +553,72 @@
   color: var(--text-muted);
 }
 
+/* ── HoL Mode Selection ── */
+.hol-mode-select {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 4rem 2rem;
+  text-align: center;
+}
+
+.hol-mode-select__title {
+  font-size: 2rem;
+  margin: 0;
+}
+
+.hol-mode-select__subtitle {
+  font-size: 1rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.hol-mode-select__options {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.hol-mode-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 2rem 2.5rem;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    border-color 0.2s,
+    transform 0.15s;
+  min-width: 200px;
+}
+
+.hol-mode-btn:hover {
+  border-color: var(--accent);
+  transform: translateY(-4px);
+}
+
+.hol-mode-btn__icon {
+  font-size: 2.5rem;
+  line-height: 1;
+}
+
+.hol-mode-btn__label {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.hol-mode-btn__desc {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
 /* ── PvP Lobby ── */
 .pvp-lobby {
   display: flex;

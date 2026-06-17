@@ -14,7 +14,7 @@ if (!res.ok) {
 const { data } = await res.json()
 console.log(`Got ${data.length} cards.`)
 
-// Format: id|name|frameType|type|attribute|atk|def|level|race|archetype|sets(JSON)|banTcg|views|viewsWeek|tcgDate
+// Format: id|name|frameType|type|attribute|atk|def|level|race|archetype|sets(JSON)|banTcg|views|viewsWeek|tcgDate|tcgplayerPrice
 const lines = data.map((c) => {
   const misc = c.misc_info?.[0]
   const sets = (c.card_sets ?? []).map((s) => ({
@@ -23,6 +23,7 @@ const lines = data.map((c) => {
     setRarity: s.set_rarity,
     setPrice: s.set_price,
   }))
+  const tcgplayerPrice = c.card_prices?.[0]?.tcgplayer_price ?? ''
   return [
     c.id,
     c.name,
@@ -39,6 +40,7 @@ const lines = data.map((c) => {
     misc?.views ?? 0,
     misc?.viewsweek ?? 0,
     misc?.tcg_date ?? '',
+    tcgplayerPrice,
   ].join('|')
 })
 

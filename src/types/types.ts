@@ -21,4 +21,5 @@ export interface Card {
   views: number
   viewsWeek: number
   tcgDate: string | null // 'YYYY-MM-DD' or null
+  tcgplayerPrice: number | null // TCGPlayer market price in USD; null when unavailable
 }

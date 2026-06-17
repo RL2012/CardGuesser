@@ -7,6 +7,7 @@ export interface LeaderboardEntry {
 const KEYS = {
   cardGuesser: 'lb_card_guesser',
   higherOrLower: 'lb_higher_or_lower',
+  higherOrLowerPrice: 'lb_higher_or_lower_price',
   cardCategories: 'lb_card_categories',
 } as const
 
