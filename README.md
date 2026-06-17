@@ -14,7 +14,11 @@ A zoomed-in crop of a card image is shown. Type the card name to guess it. Each 
 **Scoring:** `[0, 100, 300, 500, 700, 1000]` points by zoom level, minus 100 per wrong guess.
 
 ### Higher or Lower
-Two random monster cards are shown face-down. Pick which has the higher ATK stat. 3 lives, with streak bonuses every 3 consecutive correct answers.
+Three modes, all with 3 lives and streak bonuses every 3 correct answers:
+
+- **ATK Battle** — two random monsters face-down; pick which has the higher ATK.
+- **Price Check** — two random card printings; pick which costs more on TCGPlayer.
+- **Newer or Older** — two random cards; pick which was released more recently in the TCG. The release date is revealed after each guess.
 
 ### Card Categories
 A category is shown (e.g. "LIGHT Dragons", "Beast Fusion monsters", "Monsters with 1800 ATK"). Players guess cards that match. Supports **solo** and **multiplayer** modes.
@@ -39,7 +43,7 @@ Uses the same WebRTC/WebSocket multiplayer infrastructure as Card Categories (Pe
 
 ## Leaderboards
 
-Card Guesser, Higher or Lower, and Card Categories (solo) each track your top 5 high scores locally (localStorage). After each game you're prompted to enter your name. View all leaderboards from the **Home** tab.
+Card Guesser, all three Higher or Lower modes, and Card Categories (solo) each track your top 5 high scores locally (localStorage). After each game you're prompted to enter your name. View all leaderboards from the **Home** tab.
 
 ---
 
