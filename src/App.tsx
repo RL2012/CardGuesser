@@ -6,10 +6,11 @@ import HigherOrLower from './components/higher-or-lower/HigherOrLower'
 import CardCategories from './components/card-categories/CardCategories'
 import Codenames from './components/codenames/Codenames'
 import Connections from './components/connections/Connections'
+import Chameleon from './components/chameleon/Chameleon'
 import Homepage from './components/Homepage'
 import './App.css'
 
-type GameMode = 'home' | 'card-guesser' | 'higher-or-lower' | 'card-categories' | 'codenames' | 'connections'
+type GameMode = 'home' | 'card-guesser' | 'higher-or-lower' | 'card-categories' | 'codenames' | 'connections' | 'chameleon'
 
 export default function App() {
   const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark')
@@ -71,6 +72,12 @@ export default function App() {
           >
             Connections
           </button>
+          <button
+            className={`game-tab${activeGame === 'chameleon' ? ' game-tab--active' : ''}`}
+            onClick={() => setActiveGame('chameleon')}
+          >
+            Chameleon
+          </button>
         </nav>
       </header>
 
@@ -90,6 +97,7 @@ export default function App() {
           {activeGame === 'card-categories' && <CardCategories />}
           {activeGame === 'codenames' && <Codenames />}
           {activeGame === 'connections' && <Connections />}
+          {activeGame === 'chameleon' && <Chameleon />}
         </>
       )}
     </div>

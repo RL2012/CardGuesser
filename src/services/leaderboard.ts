@@ -11,6 +11,7 @@ const KEYS = {
   higherOrLowerDate: 'lb_higher_or_lower_date',
   cardCategories: 'lb_card_categories',
   connections: 'lb_connections',
+  chameleon: 'lb_chameleon',
 } as const
 
 export type GameKey = keyof typeof KEYS

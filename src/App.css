@@ -2429,3 +2429,293 @@
     gap: 5px;
   }
 }
+
+/* ── Chameleon ── */
+
+.ch-game {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ch-header {
+  text-align: center;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.ch-header__round {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.25rem;
+}
+
+.ch-header__topic {
+  font-size: 1.1rem;
+  margin-bottom: 0.25rem;
+}
+
+.ch-header__role {
+  font-size: 0.9rem;
+  color: var(--accent);
+}
+
+.ch-header__role--secret {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.ch-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ch-main {
+  flex: 1;
+  min-width: 0;
+  padding: 1.25rem;
+  overflow-y: auto;
+}
+
+.ch-sidebar {
+  width: 260px;
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.ch-sidebar__section {
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.ch-sidebar__heading {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.ch-sidebar__player {
+  font-size: 0.85rem;
+  padding: 0.2rem 0;
+}
+
+.ch-sidebar__chat {
+  flex: 1;
+  min-height: 150px;
+}
+
+.ch-phase-panel {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.ch-phase-panel__title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin: 0 0 0.75rem;
+  text-align: center;
+}
+
+.ch-phase-panel__desc {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  margin: 1.5rem 0;
+}
+
+.ch-words-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ch-word-entry {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--surface);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.ch-word-entry__name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent);
+  min-width: 0;
+}
+
+.ch-word-entry__word {
+  font-size: 0.95rem;
+  font-style: italic;
+}
+
+.ch-word-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.ch-word-form .pvp-lobby__input {
+  flex: 1;
+}
+
+.ch-waiting {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-top: 0.75rem;
+}
+
+.ch-vote-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: center;
+}
+
+.ch-vote-btn {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 0.6rem 1.25rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.ch-vote-btn:hover:not(:disabled) {
+  background: var(--surface-hover);
+  border-color: var(--accent);
+}
+
+.ch-vote-btn--selected {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.ch-vote-btn--disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.ch-reveal {
+  text-align: center;
+  padding: 0.75rem;
+  background: var(--surface);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.ch-reveal__secret {
+  font-size: 1rem;
+  margin: 0 0 0.5rem;
+}
+
+.ch-reveal__chameleon {
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.ch-reveal__chameleon-name {
+  color: var(--accent);
+}
+
+.ch-reveal__result {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-top: 0.4rem;
+}
+
+.ch-guess-result {
+  text-align: center;
+  padding: 0.5rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  margin-top: 0.75rem;
+}
+
+.ch-guess-result--correct {
+  background: #22c55e22;
+  color: #16a34a;
+  border: 1px solid #22c55e44;
+}
+
+.ch-guess-result--wrong {
+  background: #ef444422;
+  color: #dc2626;
+  border: 1px solid #ef444444;
+}
+
+.ch-round-winner {
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-top: 0.75rem;
+  color: var(--accent);
+}
+
+.ch-winner {
+  text-align: center;
+  font-size: 1.15rem;
+  margin: 1rem 0;
+}
+
+.ch-scores {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.ch-score-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.4rem 0.75rem;
+  background: var(--surface);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.ch-score-row__name {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.ch-score-row__pts {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+@media (max-width: 750px) {
+  .ch-body {
+    flex-direction: column;
+  }
+
+  .ch-sidebar {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    max-height: 220px;
+  }
+}

@@ -63,6 +63,7 @@ Never commit a lock file produced by `npm install --legacy-peer-deps` — it cau
 - `src/components/card-categories/CardCategories.tsx` — PvP and solo mode for Card Categories game. All PvP networking logic lives here.
 - `src/components/codenames/Codenames.tsx` — Multiplayer-only Codenames game (see below).
 - `src/components/connections/Connections.tsx` — Solo Connections game (see below).
+- `src/components/chameleon/Chameleon.tsx` — Multiplayer-only Chameleon social deduction game (see below).
 
 **Shared multiplayer layer** (`src/multiplayer/`): Extracted from Card Categories so both multiplayer games share it.
 
@@ -88,6 +89,11 @@ Never commit a lock file produced by `npm install --legacy-peer-deps` — it cau
 
 - **`Connections.tsx`** — Main component: pre-game intro, 4×4 tile grid, solved-category banners, shake animation on wrong guess, ScoreEntry modal on game end.
 - **`connectionsUtils.ts`** — `generateBoard(cards)` and category builder functions (`tryArchetype`, `tryFrameType`, `tryAttribute`, `tryBanStatus`, `tryLevel`, `tryRace`).
+
+**Chameleon** (`src/components/chameleon/`): Multiplayer-only social deduction (3-6 players) based on the board game. One player is secretly the Chameleon who knows only the topic; everyone else knows the secret Yu-Gi-Oh! card. Players take turns saying one word to prove they know the card, then vote out the imposter. If caught, the Chameleon gets one guess at the secret word to steal the win. Scoring: Chameleon +3 for escaping/guessing correctly, players +1 for catching them.
+
+- **`Chameleon.tsx`** — Main component: lobby, host-authoritative game logic, turn-based speaking, voting, chameleon guess, per-game chat.
+- **`chameleonTypes.ts`** — Re-exports shared types; defines `ChameleonPlayer`, `PlayerWord`, `ChameleonGameState`, `ToHostMsg`, `ToClientMsg`.
 
 **Scoring** (Card Guesser): Points by zoom level `[0, 100, 300, 500, 700, 1000]` minus `wrongGuesses.length * 100`, min 0. 60-second per-card timer, 15-minute (900s) challenge timer, both counted down by a single `tickSecond` Redux action on a `setInterval`.
 
@@ -121,13 +127,9 @@ git commit -m "describe changes made"
 git push
 ```
 
-## Cross-file sync
+## Global CLAUDE.md propagation
 
-`CLAUDE.md` and `deepseek.md` must be kept in sync. After every code change, update both files to reflect the new state of the project (new files, changed architecture, new commands, etc.). The content should be identical except for the heading and any AI-specific notes.
-
-## Global CLAUDE.md / deepseek.md propagation
-
-The global orchestrator context lives at `C:\Users\milyu\source\repos\CLAUDE.md` and `C:\Users\milyu\source\repos\deepseek.md`. These contain the authoritative per-repo summary that cross-repo sessions and subagents read to understand this project.
+The global orchestrator context lives at `C:\Users\milyu\source\repos\CLAUDE.md`. It contains the authoritative per-repo summary that cross-repo sessions and subagents read to understand this project.
 
 After any significant change in this repo, **also update the `### CardGuesser` section in both global files** so they stay accurate.
 
@@ -146,4 +148,4 @@ Update the global files when you:
 
 ### What to update
 
-Find the `### CardGuesser` section in `C:\Users\milyu\source\repos\CLAUDE.md` (and `deepseek.md`) and update whichever parts accurately reflect your change: the feature list, the key files table, the stack description, the commands block, or the card data notes.
+Find the `### CardGuesser` section in `C:\Users\milyu\source\repos\CLAUDE.md` and update whichever parts accurately reflect your change: the feature list, the key files table, the stack description, the commands block, or the card data notes.
