@@ -7,6 +7,10 @@ export const MAX_PLAYERS_CN = 8
 export type Team = 'red' | 'blue'
 export type CellTeam = 'red' | 'blue' | 'neutral' | 'assassin'
 
+export type GuessHistoryEntry =
+  | { kind: 'clue'; clueWord: string; clueCount: number; team: Team }
+  | { kind: 'guess'; cardWord: string; pickerTeam: Team; cellTeam: CellTeam }
+
 export interface BoardCell {
   word: string
   team: CellTeam

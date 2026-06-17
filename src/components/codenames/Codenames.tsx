@@ -12,6 +12,7 @@ import {
   type BoardCell,
   type CodenamesPlayer,
   type ChatMessage,
+  type GuessHistoryEntry,
   type ToHostMsg,
   type ToClientMsg,
 } from './codenamesTypes'
@@ -76,6 +77,7 @@ export default function Codenames(): ReactElement {
   const [gameState, setGameState] = useState<GameState>(INIT_GAME)
   const [clueInput, setClueInput] = useState('')
   const [clueCountInput, setClueCountInput] = useState('1')
+  const [guessHistory, setGuessHistory] = useState<GuessHistoryEntry[]>([])
 
   // Refs for stable access inside event handlers
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -120,6 +122,10 @@ export default function Codenames(): ReactElement {
       setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 0)
       return next
     })
+  }
+
+  function addHistoryEntry(entry: GuessHistoryEntry) {
+    setGuessHistory((prev) => [...prev, entry])
   }
 
   // ── Network helpers ────────────────────────────────────────────────────────────
@@ -186,6 +192,7 @@ export default function Codenames(): ReactElement {
     }
     gameStateRef.current = gs
     setGameState(gs)
+    setGuessHistory([])
     inGameRef.current = true
     broadcast({ type: 'game-started', board, activeTeam: 'red', redTotal, blueTotal })
     setLobbyPhase('game')
@@ -203,6 +210,7 @@ export default function Codenames(): ReactElement {
     }
     gameStateRef.current = next
     setGameState(next)
+    addHistoryEntry({ kind: 'clue', clueWord: word, clueCount: count, team: gs.activeTeam })
     broadcast({ type: 'clue-given', word, count })
   }
 
@@ -307,16 +315,19 @@ export default function Codenames(): ReactElement {
       const next: GameState = { ...INIT_GAME, board: msg.board, activeTeam: msg.activeTeam, redRemaining: msg.redTotal, blueRemaining: msg.blueTotal }
       gameStateRef.current = next
       setGameState(next)
+      setGuessHistory([])
       setLobbyPhase('game')
       return
     }
     if (msg.type === 'clue-given') {
+      addHistoryEntry({ kind: 'clue', clueWord: msg.word, clueCount: msg.count, team: gs.activeTeam })
       const next: GameState = { ...gs, phase: 'guessing', currentClueWord: msg.word, currentClueCount: msg.count, guessesLeft: msg.guessesLeft ?? msg.count + 1 }
       gameStateRef.current = next
       setGameState(next)
       return
     }
     if (msg.type === 'card-revealed') {
+      addHistoryEntry({ kind: 'guess', cardWord: gs.board[msg.index]?.word ?? '', pickerTeam: gs.activeTeam, cellTeam: msg.cellTeam })
       const newBoard = gs.board.map((c, i) => i === msg.index ? { ...c, revealed: true } : c)
       const next: GameState = { ...gs, board: newBoard, guessesLeft: msg.guessesLeft, redRemaining: msg.redRemaining, blueRemaining: msg.blueRemaining }
       gameStateRef.current = next
@@ -338,6 +349,7 @@ export default function Codenames(): ReactElement {
     if (msg.type === 'back-to-lobby') {
       gameStateRef.current = INIT_GAME
       setGameState(INIT_GAME)
+      setGuessHistory([])
       setLobbyPhase('room')
       setClueInput('')
       setClueCountInput('1')
@@ -347,6 +359,7 @@ export default function Codenames(): ReactElement {
       inGameRef.current = false
       gameStateRef.current = INIT_GAME
       setGameState(INIT_GAME)
+      setGuessHistory([])
       setLobbyPhase('room')
       setClueInput('')
       setClueCountInput('1')
@@ -368,6 +381,7 @@ export default function Codenames(): ReactElement {
     gameStateRef.current = INIT_GAME
     setLobbyPhase('setup')
     setGameState(INIT_GAME)
+    setGuessHistory([])
     setPlayers([])
     setChatMessages([])
     setMyPeerId(null)
@@ -612,6 +626,13 @@ export default function Codenames(): ReactElement {
       if (cell.team === 'blue') return 'cn-cell--blue-hint'
       if (cell.team === 'assassin') return 'cn-cell--assassin-hint'
       return 'cn-cell--neutral-hint'
+    }
+    // Full board reveal at game end — unrevealed cells show their team color at full opacity
+    if (gs.phase === 'game-over') {
+      if (cell.team === 'red') return 'cn-cell--red-revealed'
+      if (cell.team === 'blue') return 'cn-cell--blue-revealed'
+      if (cell.team === 'assassin') return 'cn-cell--assassin-revealed'
+      return 'cn-cell--neutral-revealed'
     }
     return ''
   }
@@ -934,6 +955,42 @@ export default function Codenames(): ReactElement {
               <button className="hol-btn" style={{ marginTop: '1rem', width: '100%' }} onClick={handleBackToLobby}>
                 Back to Lobby
               </button>
+            </div>
+          )}
+
+          {/* Guess History */}
+          {guessHistory.length > 0 && (
+            <div className="cn-sidebar__section">
+              <div className="cn-sidebar__heading">History</div>
+              <div className="cn-history">
+                {guessHistory.map((entry, i) => {
+                  if (entry.kind === 'clue') {
+                    return (
+                      <div key={i} className="cn-history__clue">
+                        <span className={`cn-history__dot cn-history__dot--${entry.team}`} />
+                        <span className="cn-history__clue-text">
+                          "{entry.clueWord}" <span className="cn-history__clue-count">({entry.clueCount})</span>
+                        </span>
+                      </div>
+                    )
+                  }
+                  const isCorrect = entry.cellTeam === entry.pickerTeam
+                  const resultText = isCorrect ? '✓'
+                    : entry.cellTeam === 'assassin' ? '💀'
+                    : entry.cellTeam === 'neutral' ? '—'
+                    : entry.cellTeam === 'red' ? 'R' : 'B'
+                  const resultColor = isCorrect ? '#22c55e'
+                    : entry.cellTeam === 'assassin' ? '#9ca3af'
+                    : entry.cellTeam === 'neutral' ? '#6b7280'
+                    : entry.cellTeam === 'red' ? '#ef4444' : '#3b82f6'
+                  return (
+                    <div key={i} className="cn-history__entry">
+                      <span className="cn-history__entry-word">{entry.cardWord}</span>
+                      <span className="cn-history__entry-result" style={{ color: resultColor }}>{resultText}</span>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           )}
 

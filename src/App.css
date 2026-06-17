@@ -2054,3 +2054,71 @@
     padding: 0.25rem;
   }
 }
+
+/* ── Guess History ── */
+.cn-history {
+  max-height: 200px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.cn-history__clue {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--border);
+}
+
+.cn-history__clue:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.cn-history__clue-text {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.cn-history__clue-count {
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.cn-history__dot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.cn-history__dot--red  { background: #ef4444; }
+.cn-history__dot--blue { background: #3b82f6; }
+
+.cn-history__entry {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  padding-left: 1rem;
+}
+
+.cn-history__entry-word {
+  flex: 1;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.cn-history__entry-result {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
