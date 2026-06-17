@@ -29,9 +29,20 @@ function getRandomAtkPair(pool: Card[]): { leftCard: Card; rightCard: Card } {
   return { leftCard: getRandomCard(pool), rightCard: getRandomCard(pool) }
 }
 
+function getRandomDatePair(pool: Card[]): { leftCard: Card; rightCard: Card } {
+  return { leftCard: getRandomCard(pool), rightCard: getRandomCard(pool) }
+}
+
 function formatSetPrice(setPrice: string): string {
   const n = parseFloat(setPrice)
   return isNaN(n) ? '—' : `$${n.toFixed(2)}`
+}
+
+function formatDate(dateStr: string | null): string {
+  if (!dateStr) return '—'
+  const [year, month, day] = dateStr.split('-').map(Number)
+  const d = new Date(year, month - 1, day)
+  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
 export default function HigherOrLower() {
@@ -51,11 +62,15 @@ export default function HigherOrLower() {
     () => cards.filter((c) => c.cardSets.some((s) => parseFloat(s.setPrice) > 0)),
     [cards],
   )
+  const dateCards = useMemo(() => cards.filter((c) => c.tcgDate !== null), [cards])
 
   const handleSelectMode = (selectedMode: HolMode) => {
     if (selectedMode === 'price') {
       const { leftCard: a, leftCardSet: sa, rightCard: b, rightCardSet: sb } = getRandomPricePair(priceCards)
       dispatch(startGame({ leftCard: a, rightCard: b, leftCardSet: sa, rightCardSet: sb, mode: selectedMode }))
+    } else if (selectedMode === 'date') {
+      const { leftCard: a, rightCard: b } = getRandomDatePair(dateCards)
+      dispatch(startGame({ leftCard: a, rightCard: b, leftCardSet: null, rightCardSet: null, mode: selectedMode }))
     } else {
       const { leftCard: a, rightCard: b } = getRandomAtkPair(monsterCards)
       dispatch(startGame({ leftCard: a, rightCard: b, leftCardSet: null, rightCardSet: null, mode: selectedMode }))
@@ -71,6 +86,9 @@ export default function HigherOrLower() {
     if (mode === 'price') {
       const { leftCard: a, leftCardSet: sa, rightCard: b, rightCardSet: sb } = getRandomPricePair(priceCards)
       dispatch(nextRound({ leftCard: a, rightCard: b, leftCardSet: sa, rightCardSet: sb }))
+    } else if (mode === 'date') {
+      const { leftCard: a, rightCard: b } = getRandomDatePair(dateCards)
+      dispatch(nextRound({ leftCard: a, rightCard: b, leftCardSet: null, rightCardSet: null }))
     } else {
       const { leftCard: a, rightCard: b } = getRandomAtkPair(monsterCards)
       dispatch(nextRound({ leftCard: a, rightCard: b, leftCardSet: null, rightCardSet: null }))
@@ -100,6 +118,11 @@ export default function HigherOrLower() {
             <span className="hol-mode-btn__label">Price Check</span>
             <span className="hol-mode-btn__desc">Which printing costs more on TCGPlayer?</span>
           </button>
+          <button className="hol-mode-btn" onClick={() => handleSelectMode('date')}>
+            <span className="hol-mode-btn__icon">📅</span>
+            <span className="hol-mode-btn__label">Newer or Older</span>
+            <span className="hol-mode-btn__desc">Which card was released more recently in TCG?</span>
+          </button>
         </div>
       </div>
     )
@@ -110,7 +133,7 @@ export default function HigherOrLower() {
   }
 
   if (phase === 'gameover') {
-    const scoreKey = mode === 'price' ? 'higherOrLowerPrice' : 'higherOrLower'
+    const scoreKey = mode === 'price' ? 'higherOrLowerPrice' : mode === 'date' ? 'higherOrLowerDate' : 'higherOrLower'
 
     if (!scoreEntrySeen) {
       return (
@@ -138,7 +161,9 @@ export default function HigherOrLower() {
                 ? 'It was a tie!'
                 : mode === 'price'
                   ? `${winnerCard.name} (${winnerSet?.setName}) had the higher price`
-                  : `${winnerCard.name} had higher ATK`}
+                  : mode === 'date'
+                    ? `${winnerCard.name} was released more recently`
+                    : `${winnerCard.name} had higher ATK`}
             </p>
             <div className="hol-arena hol-arena--compact">
               <div className={`hol-card hol-card--static ${leftWon ? 'hol-card--winner' : 'hol-card--loser'}`}>
@@ -160,7 +185,9 @@ export default function HigherOrLower() {
                   <p className="hol-card-atk">
                     {mode === 'price' && leftCardSet
                       ? formatSetPrice(leftCardSet.setPrice)
-                      : `${leftCard.atk} ATK`}
+                      : mode === 'date'
+                        ? formatDate(leftCard.tcgDate)
+                        : `${leftCard.atk} ATK`}
                   </p>
                 </div>
               </div>
@@ -184,7 +211,9 @@ export default function HigherOrLower() {
                   <p className="hol-card-atk">
                     {mode === 'price' && rightCardSet
                       ? formatSetPrice(rightCardSet.setPrice)
-                      : `${rightCard.atk} ATK`}
+                      : mode === 'date'
+                        ? formatDate(rightCard.tcgDate)
+                        : `${rightCard.atk} ATK`}
                   </p>
                 </div>
               </div>
@@ -242,7 +271,9 @@ export default function HigherOrLower() {
                 <p className="hol-card-atk">
                   {mode === 'price' && leftCardSet
                     ? formatSetPrice(leftCardSet.setPrice)
-                    : `${leftCard.atk} ATK`}
+                    : mode === 'date'
+                      ? formatDate(leftCard.tcgDate)
+                      : `${leftCard.atk} ATK`}
                 </p>
               </>
             ) : (
@@ -256,7 +287,9 @@ export default function HigherOrLower() {
                     </p>
                   </>
                 )}
-                <p className="hol-card-hint">◀ Higher Price</p>
+                <p className="hol-card-hint">
+                  {mode === 'date' ? '◀ Newer Card' : '◀ Higher Price'}
+                </p>
               </>
             )}
           </div>
@@ -295,7 +328,9 @@ export default function HigherOrLower() {
                 <p className="hol-card-atk">
                   {mode === 'price' && rightCardSet
                     ? formatSetPrice(rightCardSet.setPrice)
-                    : `${rightCard.atk} ATK`}
+                    : mode === 'date'
+                      ? formatDate(rightCard.tcgDate)
+                      : `${rightCard.atk} ATK`}
                 </p>
               </>
             ) : (
@@ -309,7 +344,9 @@ export default function HigherOrLower() {
                     </p>
                   </>
                 )}
-                <p className="hol-card-hint">Higher Price ▶</p>
+                <p className="hol-card-hint">
+                  {mode === 'date' ? 'Newer Card ▶' : 'Higher Price ▶'}
+                </p>
               </>
             )}
           </div>

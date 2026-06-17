@@ -1,7 +1,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import type { Card, CardSet } from '../types/types'
 
-export type HolMode = 'atk' | 'price'
+export type HolMode = 'atk' | 'price' | 'date'
 
 interface HigherOrLowerState {
   leftCard: Card | null
@@ -70,19 +70,31 @@ const higherOrLowerSlice = createSlice({
     },
     pickCard(state, action: PayloadAction<'left' | 'right'>) {
       const guess = action.payload
-      const leftVal =
-        state.mode === 'price'
-          ? parseFloat(state.leftCardSet?.setPrice ?? '-1')
-          : (state.leftCard?.atk ?? -1)
-      const rightVal =
-        state.mode === 'price'
-          ? parseFloat(state.rightCardSet?.setPrice ?? '-1')
-          : (state.rightCard?.atk ?? -1)
 
       let winner: 'left' | 'right' | 'tie'
-      if (leftVal > rightVal) winner = 'left'
-      else if (rightVal > leftVal) winner = 'right'
-      else winner = 'tie'
+      if (state.mode === 'date') {
+        const leftDate = state.leftCard?.tcgDate ?? null
+        const rightDate = state.rightCard?.tcgDate ?? null
+        if (leftDate && rightDate) {
+          if (leftDate > rightDate) winner = 'left'
+          else if (rightDate > leftDate) winner = 'right'
+          else winner = 'tie'
+        } else {
+          winner = 'tie'
+        }
+      } else {
+        const leftVal =
+          state.mode === 'price'
+            ? parseFloat(state.leftCardSet?.setPrice ?? '-1')
+            : (state.leftCard?.atk ?? -1)
+        const rightVal =
+          state.mode === 'price'
+            ? parseFloat(state.rightCardSet?.setPrice ?? '-1')
+            : (state.rightCard?.atk ?? -1)
+        if (leftVal > rightVal) winner = 'left'
+        else if (rightVal > leftVal) winner = 'right'
+        else winner = 'tie'
+      }
 
       const isCorrect = winner === 'tie' || guess === winner
 
