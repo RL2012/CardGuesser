@@ -1,12 +1,44 @@
 import { getLeaderboard } from '../services/leaderboard'
 
 interface Props {
-  onPlay: (game: 'card-guesser' | 'higher-or-lower' | 'card-categories') => void
+  onPlay: (game: 'card-guesser' | 'higher-or-lower' | 'card-categories' | 'codenames') => void
+}
+
+function LeaderTable({ entries }: { entries: ReturnType<typeof getLeaderboard> }) {
+  return (
+    <table className="leaderboard-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Name</th>
+          <th>Score</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {entries.length === 0 ? (
+          <tr>
+            <td colSpan={4} className="leaderboard-table__empty">No scores yet</td>
+          </tr>
+        ) : (
+          entries.map((entry, i) => (
+            <tr key={i} className={i === 0 ? 'leaderboard-table__row--gold' : ''}>
+              <td className="leaderboard-table__rank">{i + 1}</td>
+              <td>{entry.name}</td>
+              <td className="leaderboard-table__score">{entry.score}</td>
+              <td className="leaderboard-table__date">{entry.date}</td>
+            </tr>
+          ))
+        )}
+      </tbody>
+    </table>
+  )
 }
 
 export default function Homepage({ onPlay }: Props) {
   const cgBoard = getLeaderboard('cardGuesser')
   const holBoard = getLeaderboard('higherOrLower')
+  const holPriceBoard = getLeaderboard('higherOrLowerPrice')
   const ccBoard = getLeaderboard('cardCategories')
 
   return (
@@ -31,7 +63,7 @@ export default function Homepage({ onPlay }: Props) {
             <h2 className="game-mode-card__title">Higher or Lower</h2>
           </div>
           <p className="game-mode-card__desc">
-            Two face-down monster cards are revealed. Guess which has the higher ATK stat. Keep a streak going — every 3 correct answers in a row earns a bonus life. You start with 3 lives.
+            Two cards are shown. Guess which has the higher ATK stat, or which printing costs more on TCGPlayer. Keep a streak going for bonus points. You start with 3 lives.
           </p>
           <button className="hol-btn game-mode-card__btn" onClick={() => onPlay('higher-or-lower')}>
             Play
@@ -50,6 +82,19 @@ export default function Homepage({ onPlay }: Props) {
             Play
           </button>
         </div>
+
+        <div className="game-mode-card">
+          <div className="game-mode-card__header">
+            <span className="game-mode-card__icon">🕵️</span>
+            <h2 className="game-mode-card__title">Codenames</h2>
+          </div>
+          <p className="game-mode-card__desc">
+            Multiplayer Codenames with a Yu-Gi-Oh! twist. Two teams compete — Spymasters give one-word clues linking multiple cards on the 5×5 board. Operatives click matching cards to claim them. Avoid the assassin or you lose instantly!
+          </p>
+          <button className="hol-btn game-mode-card__btn" onClick={() => onPlay('codenames')}>
+            Play
+          </button>
+        </div>
       </div>
 
       <h2 className="homepage__leaderboards-heading">Leaderboards</h2>
@@ -57,92 +102,22 @@ export default function Homepage({ onPlay }: Props) {
       <div className="leaderboard-grid">
         <section className="leaderboard-section">
           <h3 className="leaderboard-section__title">Card Guesser</h3>
-          <table className="leaderboard-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Name</th>
-                <th>Score</th>
-                <th>Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {cgBoard.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="leaderboard-table__empty">No scores yet</td>
-                </tr>
-              ) : (
-                cgBoard.map((entry, i) => (
-                  <tr key={i} className={i === 0 ? 'leaderboard-table__row--gold' : ''}>
-                    <td className="leaderboard-table__rank">{i + 1}</td>
-                    <td>{entry.name}</td>
-                    <td className="leaderboard-table__score">{entry.score}</td>
-                    <td className="leaderboard-table__date">{entry.date}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+          <LeaderTable entries={cgBoard} />
         </section>
 
         <section className="leaderboard-section">
-          <h3 className="leaderboard-section__title">Higher or Lower</h3>
-          <table className="leaderboard-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Name</th>
-                <th>Score</th>
-                <th>Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {holBoard.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="leaderboard-table__empty">No scores yet</td>
-                </tr>
-              ) : (
-                holBoard.map((entry, i) => (
-                  <tr key={i} className={i === 0 ? 'leaderboard-table__row--gold' : ''}>
-                    <td className="leaderboard-table__rank">{i + 1}</td>
-                    <td>{entry.name}</td>
-                    <td className="leaderboard-table__score">{entry.score}</td>
-                    <td className="leaderboard-table__date">{entry.date}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+          <h3 className="leaderboard-section__title">Higher or Lower — ATK</h3>
+          <LeaderTable entries={holBoard} />
+        </section>
+
+        <section className="leaderboard-section">
+          <h3 className="leaderboard-section__title">Higher or Lower — Price</h3>
+          <LeaderTable entries={holPriceBoard} />
         </section>
 
         <section className="leaderboard-section">
           <h3 className="leaderboard-section__title">Card Categories</h3>
-          <table className="leaderboard-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Name</th>
-                <th>Score</th>
-                <th>Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ccBoard.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="leaderboard-table__empty">No scores yet</td>
-                </tr>
-              ) : (
-                ccBoard.map((entry, i) => (
-                  <tr key={i} className={i === 0 ? 'leaderboard-table__row--gold' : ''}>
-                    <td className="leaderboard-table__rank">{i + 1}</td>
-                    <td>{entry.name}</td>
-                    <td className="leaderboard-table__score">{entry.score}</td>
-                    <td className="leaderboard-table__date">{entry.date}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+          <LeaderTable entries={ccBoard} />
         </section>
       </div>
     </div>

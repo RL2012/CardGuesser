@@ -949,7 +949,7 @@
 
 .homepage-modes {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 1.25rem;
   width: 100%;
   max-width: 1100px;
@@ -1008,7 +1008,7 @@
 
 .leaderboard-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 1.75rem;
   width: 100%;
   max-width: 1100px;
@@ -1679,7 +1679,7 @@
   letter-spacing: 0.04em;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 600px) {
   .homepage-modes {
     grid-template-columns: 1fr;
   }
