@@ -5,10 +5,11 @@ import CardGuesser from './components/card-guesser/CardGuesser'
 import HigherOrLower from './components/higher-or-lower/HigherOrLower'
 import CardCategories from './components/card-categories/CardCategories'
 import Codenames from './components/codenames/Codenames'
+import Connections from './components/connections/Connections'
 import Homepage from './components/Homepage'
 import './App.css'
 
-type GameMode = 'home' | 'card-guesser' | 'higher-or-lower' | 'card-categories' | 'codenames'
+type GameMode = 'home' | 'card-guesser' | 'higher-or-lower' | 'card-categories' | 'codenames' | 'connections'
 
 export default function App() {
   const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark')
@@ -64,6 +65,12 @@ export default function App() {
           >
             Codenames
           </button>
+          <button
+            className={`game-tab${activeGame === 'connections' ? ' game-tab--active' : ''}`}
+            onClick={() => setActiveGame('connections')}
+          >
+            Connections
+          </button>
         </nav>
       </header>
 
@@ -82,6 +89,7 @@ export default function App() {
           {activeGame === 'higher-or-lower' && <HigherOrLower />}
           {activeGame === 'card-categories' && <CardCategories />}
           {activeGame === 'codenames' && <Codenames />}
+          {activeGame === 'connections' && <Connections />}
         </>
       )}
     </div>

@@ -1,7 +1,7 @@
 import { getLeaderboard } from '../services/leaderboard'
 
 interface Props {
-  onPlay: (game: 'card-guesser' | 'higher-or-lower' | 'card-categories' | 'codenames') => void
+  onPlay: (game: 'card-guesser' | 'higher-or-lower' | 'card-categories' | 'codenames' | 'connections') => void
 }
 
 function LeaderTable({ entries }: { entries: ReturnType<typeof getLeaderboard> }) {
@@ -41,6 +41,7 @@ export default function Homepage({ onPlay }: Props) {
   const holPriceBoard = getLeaderboard('higherOrLowerPrice')
   const holDateBoard = getLeaderboard('higherOrLowerDate')
   const ccBoard = getLeaderboard('cardCategories')
+  const cxnBoard = getLeaderboard('connections')
 
   return (
     <div className="homepage">
@@ -96,6 +97,19 @@ export default function Homepage({ onPlay }: Props) {
             Play
           </button>
         </div>
+
+        <div className="game-mode-card">
+          <div className="game-mode-card__header">
+            <span className="game-mode-card__icon">🔗</span>
+            <h2 className="game-mode-card__title">Connections</h2>
+          </div>
+          <p className="game-mode-card__desc">
+            Find four groups of four Yu-Gi-Oh! cards that share something in common — an archetype, a summoning type, an attribute, or a ban-list status. You have four mistakes before it's game over.
+          </p>
+          <button className="hol-btn game-mode-card__btn" onClick={() => onPlay('connections')}>
+            Play
+          </button>
+        </div>
       </div>
 
       <h2 className="homepage__leaderboards-heading">Leaderboards</h2>
@@ -124,6 +138,11 @@ export default function Homepage({ onPlay }: Props) {
         <section className="leaderboard-section">
           <h3 className="leaderboard-section__title">Card Categories</h3>
           <LeaderTable entries={ccBoard} />
+        </section>
+
+        <section className="leaderboard-section">
+          <h3 className="leaderboard-section__title">Connections</h3>
+          <LeaderTable entries={cxnBoard} />
         </section>
       </div>
     </div>

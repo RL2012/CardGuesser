@@ -10,6 +10,7 @@ const KEYS = {
   higherOrLowerPrice: 'lb_higher_or_lower_price',
   higherOrLowerDate: 'lb_higher_or_lower_date',
   cardCategories: 'lb_card_categories',
+  connections: 'lb_connections',
 } as const
 
 export type GameKey = keyof typeof KEYS

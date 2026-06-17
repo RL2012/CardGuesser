@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Before starting work
+
+Always run `git fetch origin && git status` before making any changes. Check whether the local branch is behind the remote — if it is, **pull first** to avoid conflicts with parallel commits from other machines.
+
 ## Commands
 
 ```bash
@@ -50,7 +54,7 @@ Never commit a lock file produced by `npm install --legacy-peer-deps` — it cau
 
 - `cards` — shared card list, loaded once at startup
 - `game` — Card Guesser state: current card, crop position (`cropX`/`cropY` as 0–1 fractions), zoom level (5 = most zoomed, 1 = full card), timers, scores, round history
-- `higherOrLower` — Higher or Lower state; includes `mode: 'atk' | 'price'` — ATK Battle compares monster ATK, Price Check compares TCGPlayer prices (cards with price = 0 are excluded)
+- `higherOrLower` — Higher or Lower state; includes `mode: 'atk' | 'price' | 'date'` — ATK Battle compares monster ATK, Price Check compares TCGPlayer prices (cards with price = 0 are excluded), Newer or Older compares TCG release dates (`tcgDate`)
 
 **Game modes** are tab-switched in `App.tsx`; each is a self-contained component tree:
 
@@ -58,6 +62,7 @@ Never commit a lock file produced by `npm install --legacy-peer-deps` — it cau
 - `src/components/higher-or-lower/HigherOrLower.tsx` — self-contained with its own Redux slice
 - `src/components/card-categories/CardCategories.tsx` — PvP and solo mode for Card Categories game. All PvP networking logic lives here.
 - `src/components/codenames/Codenames.tsx` — Multiplayer-only Codenames game (see below).
+- `src/components/connections/Connections.tsx` — Solo Connections game (see below).
 
 **Shared multiplayer layer** (`src/multiplayer/`): Extracted from Card Categories so both multiplayer games share it.
 
@@ -79,6 +84,11 @@ Never commit a lock file produced by `npm install --legacy-peer-deps` — it cau
 - **`codenamesTypes.ts`** — Re-exports shared types; defines `Team`, `CellTeam`, `BoardCell`, `CodenamesPlayer`, `ToHostMsg`, `ToClientMsg`.
 - **`codenamesUtils.ts`** — `buildWordPool(cards)` (top-viewed monsters per race/attribute/type + race/attribute/type names + popular archetypes) and `generateBoard(cards)` (picks 25 words, assigns 9 red/8 blue/7 neutral/1 assassin).
 
+**Connections** (`src/components/connections/`): Solo puzzle game. 16 card names shown in a 4×4 grid; player groups them into 4 categories of 4. Up to 4 mistakes allowed. Categories are color-coded by difficulty: yellow (archetype) → green (frame type) → blue (attribute) → purple (ban status/level/race). Board generated from the top 3000 most-viewed cards; `generateBoard` picks one category per tier in order, excluding already-used card names to prevent overlap. Score = `(4 - mistakes) * 100` on win, 0 on loss. Auto-solves the last group when 3 of 4 categories are found.
+
+- **`Connections.tsx`** — Main component: pre-game intro, 4×4 tile grid, solved-category banners, shake animation on wrong guess, ScoreEntry modal on game end.
+- **`connectionsUtils.ts`** — `generateBoard(cards)` and category builder functions (`tryArchetype`, `tryFrameType`, `tryAttribute`, `tryBanStatus`, `tryLevel`, `tryRace`).
+
 **Scoring** (Card Guesser): Points by zoom level `[0, 100, 300, 500, 700, 1000]` minus `wrongGuesses.length * 100`, min 0. 60-second per-card timer, 15-minute (900s) challenge timer, both counted down by a single `tickSecond` Redux action on a `setInterval`.
 
 **Theme:** `data-theme` attribute on `<html>`, toggled in `App.tsx`, persisted to `localStorage`. CSS vars are defined per theme in `App.css`.
@@ -95,7 +105,7 @@ Never commit a lock file produced by `npm install --legacy-peer-deps` — it cau
 
 ## Committing changes
 
-After completing the code changes requested by the user, stage all modified and new files and commit with a descriptive message. The subject line must be ≤ 70 characters and explain *what* changed and *why* — not just which files were touched. Always include the co-author trailer:
+Never auto-commit changes. Only run `git commit` when the user explicitly asks. When asked to commit, stage all modified and new files and use a subject line ≤ 70 characters explaining *what* changed and *why*. Always include the co-author trailer:
 
 ```
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
