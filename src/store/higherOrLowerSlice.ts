@@ -1,11 +1,13 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
-import type { Card } from '../types/types'
+import type { Card, CardSet } from '../types/types'
 
 export type HolMode = 'atk' | 'price'
 
 interface HigherOrLowerState {
   leftCard: Card | null
   rightCard: Card | null
+  leftCardSet: CardSet | null
+  rightCardSet: CardSet | null
   lives: number
   score: number
   streak: number
@@ -23,6 +25,8 @@ const MAX_LIVES = 3
 const initialState: HigherOrLowerState = {
   leftCard: null,
   rightCard: null,
+  leftCardSet: null,
+  rightCardSet: null,
   lives: MAX_LIVES,
   score: 0,
   streak: 0,
@@ -39,9 +43,20 @@ const higherOrLowerSlice = createSlice({
   name: 'higherOrLower',
   initialState,
   reducers: {
-    startGame(state, action: PayloadAction<{ leftCard: Card; rightCard: Card; mode: HolMode }>) {
+    startGame(
+      state,
+      action: PayloadAction<{
+        leftCard: Card
+        rightCard: Card
+        leftCardSet: CardSet | null
+        rightCardSet: CardSet | null
+        mode: HolMode
+      }>,
+    ) {
       state.leftCard = action.payload.leftCard
       state.rightCard = action.payload.rightCard
+      state.leftCardSet = action.payload.leftCardSet
+      state.rightCardSet = action.payload.rightCardSet
       state.mode = action.payload.mode
       state.lives = MAX_LIVES
       state.score = 0
@@ -57,11 +72,11 @@ const higherOrLowerSlice = createSlice({
       const guess = action.payload
       const leftVal =
         state.mode === 'price'
-          ? (state.leftCard?.tcgplayerPrice ?? -1)
+          ? parseFloat(state.leftCardSet?.setPrice ?? '-1')
           : (state.leftCard?.atk ?? -1)
       const rightVal =
         state.mode === 'price'
-          ? (state.rightCard?.tcgplayerPrice ?? -1)
+          ? parseFloat(state.rightCardSet?.setPrice ?? '-1')
           : (state.rightCard?.atk ?? -1)
 
       let winner: 'left' | 'right' | 'tie'
@@ -90,9 +105,19 @@ const higherOrLowerSlice = createSlice({
         state.phase = state.lives <= 0 ? 'gameover' : 'reveal'
       }
     },
-    nextRound(state, action: PayloadAction<{ leftCard: Card; rightCard: Card }>) {
+    nextRound(
+      state,
+      action: PayloadAction<{
+        leftCard: Card
+        rightCard: Card
+        leftCardSet: CardSet | null
+        rightCardSet: CardSet | null
+      }>,
+    ) {
       state.leftCard = action.payload.leftCard
       state.rightCard = action.payload.rightCard
+      state.leftCardSet = action.payload.leftCardSet
+      state.rightCardSet = action.payload.rightCardSet
       state.phase = 'picking'
       state.lastWinner = null
       state.playerChoice = null

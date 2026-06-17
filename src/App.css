@@ -447,6 +447,19 @@
   text-overflow: ellipsis;
 }
 
+.hol-card-set {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin: 0 0 0.2rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hol-card-set--rarity {
+  font-style: italic;
+}
+
 .hol-card-atk {
   font-size: 1.375rem;
   font-weight: 700;

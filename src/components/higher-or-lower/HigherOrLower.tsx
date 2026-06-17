@@ -4,38 +4,62 @@ import { startGame, pickCard, nextRound, resetGame, type HolMode } from '../../s
 import { getRandomCard } from '../../utils/utils'
 import ScoreEntry from '../ScoreEntry'
 import { addScore } from '../../services/leaderboard'
-import type { Card } from '../../types/types'
+import type { Card, CardSet } from '../../types/types'
 
-function getRandomPair(pool: Card[]): [Card, Card] {
-  const a = getRandomCard(pool)
-  const b = getRandomCard(pool, a)
-  return [a, b]
+function getRandomValidSet(card: Card): CardSet | null {
+  const valid = card.cardSets.filter((s) => parseFloat(s.setPrice) > 0)
+  if (valid.length === 0) return null
+  return valid[Math.floor(Math.random() * valid.length)]
 }
 
-function formatPrice(price: number | null): string {
-  if (price === null) return '—'
-  return `$${price.toFixed(2)}`
+function getRandomPricePair(
+  pool: Card[],
+): { leftCard: Card; leftCardSet: CardSet; rightCard: Card; rightCardSet: CardSet } {
+  const a = getRandomCard(pool)
+  const b = getRandomCard(pool, a)
+  return {
+    leftCard: a,
+    leftCardSet: getRandomValidSet(a)!,
+    rightCard: b,
+    rightCardSet: getRandomValidSet(b)!,
+  }
+}
+
+function getRandomAtkPair(pool: Card[]): { leftCard: Card; rightCard: Card } {
+  return { leftCard: getRandomCard(pool), rightCard: getRandomCard(pool) }
+}
+
+function formatSetPrice(setPrice: string): string {
+  const n = parseFloat(setPrice)
+  return isNaN(n) ? '—' : `$${n.toFixed(2)}`
 }
 
 export default function HigherOrLower() {
   const dispatch = useAppDispatch()
   const { cards } = useAppSelector((s) => s.cards)
-  const { leftCard, rightCard, lives, score, streak, phase, lastWinner, playerChoice, lastPointsEarned, totalRounds, correctAnswers, mode } =
-    useAppSelector((s) => s.higherOrLower)
+  const {
+    leftCard, rightCard, leftCardSet, rightCardSet,
+    lives, score, streak, phase, lastWinner, playerChoice,
+    lastPointsEarned, totalRounds, correctAnswers, mode,
+  } = useAppSelector((s) => s.higherOrLower)
 
   const [scoreEntrySeen, setScoreEntrySeen] = useState(false)
   const [modeSelected, setModeSelected] = useState(false)
 
   const monsterCards = useMemo(() => cards.filter((c) => c.atk !== null), [cards])
   const priceCards = useMemo(
-    () => cards.filter((c) => c.tcgplayerPrice !== null && c.tcgplayerPrice > 0),
+    () => cards.filter((c) => c.cardSets.some((s) => parseFloat(s.setPrice) > 0)),
     [cards],
   )
 
   const handleSelectMode = (selectedMode: HolMode) => {
-    const pool = selectedMode === 'price' ? priceCards : monsterCards
-    const [a, b] = getRandomPair(pool)
-    dispatch(startGame({ leftCard: a, rightCard: b, mode: selectedMode }))
+    if (selectedMode === 'price') {
+      const { leftCard: a, leftCardSet: sa, rightCard: b, rightCardSet: sb } = getRandomPricePair(priceCards)
+      dispatch(startGame({ leftCard: a, rightCard: b, leftCardSet: sa, rightCardSet: sb, mode: selectedMode }))
+    } else {
+      const { leftCard: a, rightCard: b } = getRandomAtkPair(monsterCards)
+      dispatch(startGame({ leftCard: a, rightCard: b, leftCardSet: null, rightCardSet: null, mode: selectedMode }))
+    }
     setModeSelected(true)
   }
 
@@ -44,9 +68,13 @@ export default function HigherOrLower() {
   }
 
   const handleNext = () => {
-    const pool = mode === 'price' ? priceCards : monsterCards
-    const [a, b] = getRandomPair(pool)
-    dispatch(nextRound({ leftCard: a, rightCard: b }))
+    if (mode === 'price') {
+      const { leftCard: a, leftCardSet: sa, rightCard: b, rightCardSet: sb } = getRandomPricePair(priceCards)
+      dispatch(nextRound({ leftCard: a, rightCard: b, leftCardSet: sa, rightCardSet: sb }))
+    } else {
+      const { leftCard: a, rightCard: b } = getRandomAtkPair(monsterCards)
+      dispatch(nextRound({ leftCard: a, rightCard: b, leftCardSet: null, rightCardSet: null }))
+    }
   }
 
   const handleReset = () => {
@@ -70,7 +98,7 @@ export default function HigherOrLower() {
           <button className="hol-mode-btn" onClick={() => handleSelectMode('price')}>
             <span className="hol-mode-btn__icon">💰</span>
             <span className="hol-mode-btn__label">Price Check</span>
-            <span className="hol-mode-btn__desc">Which card costs more on TCGPlayer?</span>
+            <span className="hol-mode-btn__desc">Which printing costs more on TCGPlayer?</span>
           </button>
         </div>
       </div>
@@ -96,19 +124,21 @@ export default function HigherOrLower() {
 
     const leftWon = lastWinner === 'left' || lastWinner === 'tie'
     const rightWon = lastWinner === 'right' || lastWinner === 'tie'
-    const winnerCard = lastWinner === 'left' ? leftCard : rightCard
-    const higherLabel = mode === 'price' ? 'higher price' : 'higher ATK'
+    const winnerCard = lastWinner === 'right' ? rightCard : leftCard
+    const winnerSet = lastWinner === 'right' ? rightCardSet : leftCardSet
 
     return (
       <div className="hol-gameover">
         <h2>Game Over</h2>
 
-        {leftCard && rightCard && lastWinner && (
+        {lastWinner && (
           <>
             <p className="hol-gameover__last-label">
               {lastWinner === 'tie'
                 ? 'It was a tie!'
-                : `${winnerCard.name} had ${higherLabel}`}
+                : mode === 'price'
+                  ? `${winnerCard.name} (${winnerSet?.setName}) had the higher price`
+                  : `${winnerCard.name} had higher ATK`}
             </p>
             <div className="hol-arena hol-arena--compact">
               <div className={`hol-card hol-card--static ${leftWon ? 'hol-card--winner' : 'hol-card--loser'}`}>
@@ -121,8 +151,13 @@ export default function HigherOrLower() {
                 </div>
                 <div className="hol-card-info">
                   <p className="hol-card-name">{leftCard.name}</p>
+                  {mode === 'price' && leftCardSet && (
+                    <p className="hol-card-set">{leftCardSet.setName} · {leftCardSet.setRarity}</p>
+                  )}
                   <p className="hol-card-atk">
-                    {mode === 'price' ? formatPrice(leftCard.tcgplayerPrice) : `${leftCard.atk} ATK`}
+                    {mode === 'price' && leftCardSet
+                      ? formatSetPrice(leftCardSet.setPrice)
+                      : `${leftCard.atk} ATK`}
                   </p>
                 </div>
               </div>
@@ -137,8 +172,13 @@ export default function HigherOrLower() {
                 </div>
                 <div className="hol-card-info">
                   <p className="hol-card-name">{rightCard.name}</p>
+                  {mode === 'price' && rightCardSet && (
+                    <p className="hol-card-set">{rightCardSet.setName} · {rightCardSet.setRarity}</p>
+                  )}
                   <p className="hol-card-atk">
-                    {mode === 'price' ? formatPrice(rightCard.tcgplayerPrice) : `${rightCard.atk} ATK`}
+                    {mode === 'price' && rightCardSet
+                      ? formatSetPrice(rightCardSet.setPrice)
+                      : `${rightCard.atk} ATK`}
                   </p>
                 </div>
               </div>
@@ -155,7 +195,6 @@ export default function HigherOrLower() {
 
   const isRevealed = phase === 'reveal'
   const isCorrectAnswer = isRevealed && (playerChoice === lastWinner || lastWinner === 'tie')
-  const hintLabel = mode === 'price' ? 'Higher Price' : 'Higher ATK'
 
   return (
     <main className="hol-main">
@@ -166,6 +205,7 @@ export default function HigherOrLower() {
       </div>
 
       <div className="hol-arena">
+        {/* Left card */}
         <button
           className={[
             'hol-card',
@@ -187,18 +227,32 @@ export default function HigherOrLower() {
             {isRevealed ? (
               <>
                 <p className="hol-card-name">{leftCard.name}</p>
+                {mode === 'price' && leftCardSet && (
+                  <p className="hol-card-set">{leftCardSet.setName} · {leftCardSet.setRarity}</p>
+                )}
                 <p className="hol-card-atk">
-                  {mode === 'price' ? formatPrice(leftCard.tcgplayerPrice) : `${leftCard.atk} ATK`}
+                  {mode === 'price' && leftCardSet
+                    ? formatSetPrice(leftCardSet.setPrice)
+                    : `${leftCard.atk} ATK`}
                 </p>
               </>
             ) : (
-              <p className="hol-card-hint">◀ {hintLabel}</p>
+              <>
+                {mode === 'price' && leftCardSet && (
+                  <>
+                    <p className="hol-card-set">{leftCardSet.setName}</p>
+                    <p className="hol-card-set hol-card-set--rarity">{leftCardSet.setRarity}</p>
+                  </>
+                )}
+                <p className="hol-card-hint">◀ Higher Price</p>
+              </>
             )}
           </div>
         </button>
 
         <div className="hol-vs">VS</div>
 
+        {/* Right card */}
         <button
           className={[
             'hol-card',
@@ -220,12 +274,25 @@ export default function HigherOrLower() {
             {isRevealed ? (
               <>
                 <p className="hol-card-name">{rightCard.name}</p>
+                {mode === 'price' && rightCardSet && (
+                  <p className="hol-card-set">{rightCardSet.setName} · {rightCardSet.setRarity}</p>
+                )}
                 <p className="hol-card-atk">
-                  {mode === 'price' ? formatPrice(rightCard.tcgplayerPrice) : `${rightCard.atk} ATK`}
+                  {mode === 'price' && rightCardSet
+                    ? formatSetPrice(rightCardSet.setPrice)
+                    : `${rightCard.atk} ATK`}
                 </p>
               </>
             ) : (
-              <p className="hol-card-hint">{hintLabel} ▶</p>
+              <>
+                {mode === 'price' && rightCardSet && (
+                  <>
+                    <p className="hol-card-set">{rightCardSet.setName}</p>
+                    <p className="hol-card-set hol-card-set--rarity">{rightCardSet.setRarity}</p>
+                  </>
+                )}
+                <p className="hol-card-hint">Higher Price ▶</p>
+              </>
             )}
           </div>
         </button>
