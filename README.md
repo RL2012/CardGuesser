@@ -1,6 +1,6 @@
 # Card Guesser
 
-A Yu-Gi-Oh! card mini-game web app with five game modes. Built with React + TypeScript + Vite, deployed to GitHub Pages.
+A Yu-Gi-Oh! card mini-game web app with six game modes. Built with React + TypeScript + Vite, deployed to GitHub Pages.
 
 **[Play it here](https://rl2012.github.io/CardGuesser/)**
 
@@ -39,11 +39,22 @@ Each team has a **Spymaster** (who can see all card colors on the board) and one
 
 Uses the same WebRTC/WebSocket multiplayer infrastructure as Card Categories (PeerJS + metered.ca TURN, with a WebSocket relay fallback for localhost/Firefox).
 
+### Connections
+A solo puzzle mode inspired by NYT Connections. 16 Yu-Gi-Oh! card names are displayed in a 4×4 grid. Find the four groups of four that share something in common.
+
+Categories are colour-coded by difficulty:
+- **Yellow (easiest):** All four cards share an archetype (e.g. "Blue-Eyes Archetype")
+- **Green:** All four are the same extra-deck or ritual summoning type (e.g. "Synchro Monsters")
+- **Blue:** All four share an attribute (e.g. "DARK Attribute")
+- **Purple (hardest):** All four share a ban-list status, level, or monster type (e.g. "Forbidden Cards", "Level 4 Monsters")
+
+You have 4 mistakes before the game ends. The last group is auto-solved once the other three are found. **Scoring:** `(4 − mistakes) × 100` on a win.
+
 ---
 
 ## Leaderboards
 
-Card Guesser, all three Higher or Lower modes, and Card Categories (solo) each track your top 5 high scores locally (localStorage). After each game you're prompted to enter your name. View all leaderboards from the **Home** tab.
+Card Guesser, all three Higher or Lower modes, Card Categories (solo), and Connections each track your top 5 high scores locally (localStorage). After each game you're prompted to enter your name. View all leaderboards from the **Home** tab.
 
 ---
 
