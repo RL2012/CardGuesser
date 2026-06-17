@@ -1,6 +1,6 @@
 # Card Guesser
 
-A Yu-Gi-Oh! card mini-game web app with four game modes. Built with React + TypeScript + Vite, deployed to GitHub Pages.
+A Yu-Gi-Oh! card mini-game web app with five game modes. Built with React + TypeScript + Vite, deployed to GitHub Pages.
 
 **[Play it here](https://rl2012.github.io/CardGuesser/)**
 
@@ -23,6 +23,17 @@ A category is shown (e.g. "LIGHT Dragons", "Beast Fusion monsters", "Monsters wi
 - **Multiplayer** (up to 4 players, WebRTC via PeerJS): A leader picks from 3 categories each round, then players guess in rotation. Each player has 60 seconds to name a card; running out of time counts as a wrong guess. Wrong guess or timeout loses a life; last player with lives remaining wins.
 
 Categories are generated from a weighted pool of templates: race + attribute, race/attribute/type combos, archetype, level + race/attribute/type (with Link Rating support), card set membership, ban list status, top-100-this-week, and release year. ATK/DEF-value categories are rare; combination categories are most common.
+
+### Codenames: Yu-Gi-Oh!
+A multiplayer-only take on the classic Codenames word game with a Yu-Gi-Oh! card theme. Up to 8 players split into Red and Blue teams.
+
+Each team has a **Spymaster** (who can see all card colors on the board) and one or more **Operatives** (who cannot). The Spymaster gives a one-word clue and a number each turn; the Operatives try to click the cards on the board that match it without hitting the Assassin card or the enemy team's cards.
+
+**Board generation:** 25 words are drawn from a pool of top-viewed monster names per race/attribute/frame type, race/attribute/type names themselves, and popular archetype names — giving spymasters a rich set of thematic connections to exploit. Red starts with 9 cards, Blue has 8, there are 7 neutral cards, and 1 Assassin.
+
+**Win conditions:** Reveal all your team's cards (win), or click the Assassin (instant loss for your team).
+
+Uses the same WebRTC/WebSocket multiplayer infrastructure as Card Categories (PeerJS + metered.ca TURN, with a WebSocket relay fallback for localhost/Firefox).
 
 ---
 
