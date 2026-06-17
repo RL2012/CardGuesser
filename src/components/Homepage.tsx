@@ -39,6 +39,7 @@ export default function Homepage({ onPlay }: Props) {
   const cgBoard = getLeaderboard('cardGuesser')
   const holBoard = getLeaderboard('higherOrLower')
   const holPriceBoard = getLeaderboard('higherOrLowerPrice')
+  const holDateBoard = getLeaderboard('higherOrLowerDate')
   const ccBoard = getLeaderboard('cardCategories')
 
   return (
@@ -63,7 +64,7 @@ export default function Homepage({ onPlay }: Props) {
             <h2 className="game-mode-card__title">Higher or Lower</h2>
           </div>
           <p className="game-mode-card__desc">
-            Two cards are shown. Guess which has the higher ATK stat, or which printing costs more on TCGPlayer. Keep a streak going for bonus points. You start with 3 lives.
+            Two cards are shown side by side. Pick which has the higher ATK, which printing costs more on TCGPlayer, or which card was released more recently in the TCG. Keep a streak going for bonus points. You start with 3 lives.
           </p>
           <button className="hol-btn game-mode-card__btn" onClick={() => onPlay('higher-or-lower')}>
             Play
@@ -113,6 +114,11 @@ export default function Homepage({ onPlay }: Props) {
         <section className="leaderboard-section">
           <h3 className="leaderboard-section__title">Higher or Lower — Price</h3>
           <LeaderTable entries={holPriceBoard} />
+        </section>
+
+        <section className="leaderboard-section">
+          <h3 className="leaderboard-section__title">Higher or Lower — Date</h3>
+          <LeaderTable entries={holDateBoard} />
         </section>
 
         <section className="leaderboard-section">
