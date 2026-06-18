@@ -703,6 +703,7 @@ export default function Chameleon(): ReactElement {
     gs.votes.filter((v) => v.targetId !== gs.chameleonId).length
   const myVoteTarget = gs.votes.find((v) => v.voterId === myPeerId)?.targetId
   const needsChameleonGuess = amIChameleon && chameleonWasCaught && gs.chameleonGuess === null
+  const secretRevealed = !amIChameleon || (gs.phase === 'results' && !needsChameleonGuess)
   const resultsReady =
     gs.phase === 'results' &&
     (!needsChameleonGuess || gs.chameleonGuess !== null) &&
@@ -898,12 +899,11 @@ export default function Chameleon(): ReactElement {
           <div className="ch-grid">
             {gs.gridWords.map((word, i) => {
               const isSecret = i === gs.secretWordIndex
-              const showSecret = !amIChameleon || gs.phase === 'results'
               const clickable = needsChameleonGuess
               return (
                 <div
                   key={i}
-                  className={`ch-grid__cell${showSecret && isSecret ? ' ch-grid__cell--secret' : ''}${clickable ? ' ch-grid__cell--guessable' : ''}`}
+                  className={`ch-grid__cell${secretRevealed && isSecret ? ' ch-grid__cell--secret' : ''}${clickable ? ' ch-grid__cell--guessable' : ''}`}
                   onClick={clickable ? () => handleChameleonGridGuess(word) : undefined}
                   role={clickable ? 'button' : undefined}
                   tabIndex={clickable ? 0 : undefined}
@@ -1013,7 +1013,9 @@ export default function Chameleon(): ReactElement {
               <h3 className="ch-phase-panel__title">Results</h3>
 
               <div className="ch-reveal">
-                <p className="ch-reveal__secret">The secret word was: <strong>{gs.secretWord}</strong></p>
+                {secretRevealed && (
+                  <p className="ch-reveal__secret">The secret word was: <strong>{gs.secretWord}</strong></p>
+                )}
                 <p className="ch-reveal__chameleon">
                   The Chameleon was: <strong className="ch-reveal__chameleon-name">{chameleonPlayer?.name ?? 'Unknown'}</strong>
                 </p>
