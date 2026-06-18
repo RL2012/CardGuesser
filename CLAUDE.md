@@ -90,10 +90,10 @@ Never commit a lock file produced by `npm install --legacy-peer-deps` — it cau
 - **`Connections.tsx`** — Main component: pre-game intro, 4×4 tile grid, solved-category banners, shake animation on wrong guess, ScoreEntry modal on game end.
 - **`connectionsUtils.ts`** — `generateBoard(cards)` and category builder functions (`tryArchetype`, `tryFrameType`, `tryAttribute`, `tryBanStatus`, `tryLevel`, `tryRace`).
 
-**Chameleon** (`src/components/chameleon/`): Multiplayer-only social deduction (3-6 players) based on the board game. One player is secretly the Chameleon who knows only the topic; everyone else knows the secret Yu-Gi-Oh! card. Players take turns saying one word to prove they know the card, then vote out the imposter. If caught, the Chameleon gets one guess at the secret word to steal the win. Scoring: Chameleon +3 for escaping/guessing correctly, players +1 for catching them.
+**Chameleon** (`src/components/chameleon/`): Multiplayer-only social deduction (3-6 players) based on the board game. One player is secretly the Chameleon who knows only the topic; everyone else knows which of the 16 words on a 4×4 grid is the real secret Yu-Gi-Oh! card. Players take turns saying one word to prove they know the card, then vote out the imposter. If caught, the Chameleon clicks a word on the board to guess — if correct they still win. The 16 grid words are drawn from the top 100 most-viewed cards matching the topic criteria (attribute, race, frame type, or level). Scoring: Chameleon +3 for escaping/guessing correctly, players +1 for catching them.
 
-- **`Chameleon.tsx`** — Main component: lobby, host-authoritative game logic, turn-based speaking, voting, chameleon guess, per-game chat.
-- **`chameleonTypes.ts`** — Re-exports shared types; defines `ChameleonPlayer`, `PlayerWord`, `ChameleonGameState`, `ToHostMsg`, `ToClientMsg`.
+- **`Chameleon.tsx`** — Main component: lobby, host-authoritative game logic, turn-based speaking, voting, board-click guess, per-game chat.
+- **`chameleonTypes.ts`** — Re-exports shared types; defines `ChameleonPlayer`, `PlayerWord`, `ChameleonGameState` (with `gridWords` and `secretWordIndex`), `ToHostMsg`, `ToClientMsg`.
 
 **Scoring** (Card Guesser): Points by zoom level `[0, 100, 300, 500, 700, 1000]` minus `wrongGuesses.length * 100`, min 0. 60-second per-card timer, 15-minute (900s) challenge timer, both counted down by a single `tickSecond` Redux action on a `setInterval`.
 
@@ -126,6 +126,10 @@ git add -A
 git commit -m "describe changes made"
 git push
 ```
+
+## README.md synchronization
+
+Whenever `CLAUDE.md`, `deepseek.md`, or `README.md` is updated, **always update all three files** so they stay in sync. Changes to architecture, game modes, commands, or conventions described in one must be reflected in the others.
 
 ## Global CLAUDE.md propagation
 

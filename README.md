@@ -50,6 +50,15 @@ Categories are colour-coded by difficulty:
 
 You have 4 mistakes before the game ends. The last group is auto-solved once the other three are found. **Scoring:** `(4 − mistakes) × 100` on a win.
 
+### Chameleon
+A multiplayer-only social deduction game (3–6 players) based on the board game. One player is secretly the **Chameleon** who knows only the topic (e.g. "DARK monsters"); everyone else knows which of the 16 words on a 4×4 grid is the real secret Yu-Gi-Oh! card.
+
+Players take turns saying **one word** to prove they know the card. After all have spoken, everyone votes for who they think the Chameleon is. If the Chameleon escapes, they win the round (+3 pts). If caught, the Chameleon gets one chance to **click the correct word on the board** to steal the win (+3 pts); otherwise the players win (+1 pt each).
+
+**Grid generation:** 16 words are drawn from the top 100 most-viewed cards matching the chosen topic (attribute, race, frame type, or level).
+
+Uses the same WebRTC/WebSocket multiplayer infrastructure as Card Categories and Codenames.
+
 ---
 
 ## Leaderboards
