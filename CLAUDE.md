@@ -133,9 +133,9 @@ Whenever `CLAUDE.md` or `README.md` is updated, **always update both files** so 
 
 ## Global CLAUDE.md propagation
 
-The global orchestrator context lives at `C:\Users\a1670\Documents\GitHub\CLAUDE.md`. It contains the authoritative per-repo summary that cross-repo sessions and subagents read to understand this project.
+The global orchestrator context lives at `{ROOT}\CLAUDE.md` (where `{ROOT}` is `C:\Users\a1670\Documents\GitHub` or `C:\Users\milyu\source\repos`). It contains the authoritative per-repo summary that cross-repo sessions and subagents read to understand this project.
 
-After any significant change in this repo, **also update the `### CardGuesser` section in both global files** so they stay accurate.
+After any significant change in this repo, **also update the `### CardGuesser` section in that global file** so it stays accurate.
 
 ### What counts as a significant change
 
@@ -152,4 +152,4 @@ Update the global files when you:
 
 ### What to update
 
-Find the `### CardGuesser` section in `C:\Users\a1670\Documents\GitHub\CLAUDE.md` and update whichever parts accurately reflect your change: the feature list, the key files table, the stack description, the commands block, or the card data notes.
+Find the `### CardGuesser` section in `{ROOT}\CLAUDE.md` and update whichever parts accurately reflect your change: the feature list, the key files table, the stack description, the commands block, or the card data notes.
