@@ -2470,6 +2470,34 @@
   color: var(--text-muted);
 }
 
+.ch-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.4rem;
+  max-width: 640px;
+  margin: 0.5rem auto 0;
+}
+
+.ch-grid__cell {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.45rem 0.35rem;
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.25;
+  word-break: break-word;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.ch-grid__cell--secret {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 700;
+}
+
 .ch-body {
   display: flex;
   flex: 1;

@@ -26,6 +26,8 @@ const INIT_GAME: ChameleonGameState = {
   phase: 'reveal',
   topic: '',
   secretWord: '',
+  gridWords: [],
+  secretWordIndex: -1,
   chameleonId: '',
   words: [],
   votes: [],
@@ -51,7 +53,7 @@ function shuffle<T>(arr: T[]): T[] {
 
 // ── Topic/secret word generation from card data ────────────────────────────
 
-type CardLike = { frameType: string; attribute: string; race: string; atk: number | null; level: number; name: string }
+type CardLike = { frameType: string; attribute: string; race: string; atk: number | null; level: number; name: string; views: number }
 
 function makeTopics(): { label: string; filter: (c: CardLike) => boolean }[] {
   return [
@@ -135,14 +137,16 @@ export default function Chameleon(): ReactElement {
 
   // ── Host: topic generation ──────────────────────────────────────────────
 
-  function generateTopicAndWord(): { topic: string; secretWord: string } {
+  function generateTopicAndWord(): { topic: string; gridWords: string[]; secretWordIndex: number; secretWord: string } {
     const monsters = cardsRef.current.filter((c) => c.atk !== null) as unknown as CardLike[]
     const topics = makeTopics()
     const chosen = topics[Math.floor(Math.random() * topics.length)]
     const matching = monsters.filter(chosen.filter)
-    if (matching.length === 0) return generateTopicAndWord()
-    const secret = matching[Math.floor(Math.random() * matching.length)]
-    return { topic: chosen.label, secretWord: secret.name }
+    if (matching.length < 16) return generateTopicAndWord()
+    const top100 = [...matching].sort((a, b) => (b.views ?? 0) - (a.views ?? 0)).slice(0, 100)
+    const grid = shuffle(top100).slice(0, 16).map((c) => c.name)
+    const secretWordIndex = Math.floor(Math.random() * 16)
+    return { topic: chosen.label, gridWords: grid, secretWordIndex, secretWord: grid[secretWordIndex] }
   }
 
   // ── Host: game logic ────────────────────────────────────────────────────
@@ -161,7 +165,7 @@ export default function Chameleon(): ReactElement {
 
   function hostStartRound() {
     roundFinalizedRef.current = false
-    const { topic, secretWord } = generateTopicAndWord()
+    const { topic, gridWords, secretWordIndex, secretWord } = generateTopicAndWord()
     const playerIds = playersRef.current.map((p) => p.peerId)
     const chameleonId = playerIds[Math.floor(Math.random() * playerIds.length)]
     const speakingOrder = shuffle(playerIds)
@@ -172,6 +176,8 @@ export default function Chameleon(): ReactElement {
         topic,
         yourRole: peerId === chameleonId ? 'chameleon' : 'player',
         secretWord: peerId === chameleonId ? '' : secretWord,
+        gridWords,
+        secretWordIndex: peerId === chameleonId ? -1 : secretWordIndex,
         speakingOrder,
       } satisfies ToClientMsg)
     })
@@ -182,6 +188,8 @@ export default function Chameleon(): ReactElement {
       topic,
       yourRole: hostIsChameleon ? 'chameleon' : 'player',
       secretWord: hostIsChameleon ? '' : secretWord,
+      gridWords,
+      secretWordIndex: hostIsChameleon ? -1 : secretWordIndex,
       speakingOrder,
     })
 
@@ -191,6 +199,8 @@ export default function Chameleon(): ReactElement {
       phase: 'speaking',
       topic,
       secretWord,
+      gridWords,
+      secretWordIndex,
       chameleonId,
       words: [],
       votes: [],
@@ -272,6 +282,8 @@ export default function Chameleon(): ReactElement {
         votes,
         chameleonId: gs.chameleonId,
         secretWord: gs.secretWord,
+        gridWords: gs.gridWords,
+        secretWordIndex: gs.secretWordIndex,
       })
     } else {
       const updated: ChameleonGameState = { ...gs, votes }
@@ -367,6 +379,8 @@ export default function Chameleon(): ReactElement {
         phase: 'speaking',
         topic: msg.topic,
         secretWord: msg.secretWord,
+        gridWords: msg.gridWords,
+        secretWordIndex: msg.secretWordIndex,
         chameleonId: '',
         words: [],
         votes: [],
@@ -425,6 +439,8 @@ export default function Chameleon(): ReactElement {
         votes: msg.votes,
         chameleonId: msg.chameleonId,
         secretWord: msg.secretWord,
+        gridWords: msg.gridWords,
+        secretWordIndex: msg.secretWordIndex,
       }
       setGameState(gameStateRef.current)
       roundFinalizedRef.current = false
@@ -881,17 +897,34 @@ export default function Chameleon(): ReactElement {
         <div className="ch-header__topic">
           Topic: <strong>{gs.topic}</strong>
         </div>
+        {/* 4x4 word grid */}
+        {gs.gridWords.length === 16 && (
+          <div className="ch-grid">
+            {gs.gridWords.map((word, i) => {
+              const isSecret = i === gs.secretWordIndex
+              const showSecret = !amIChameleon || gs.phase === 'results'
+              return (
+                <div
+                  key={i}
+                  className={`ch-grid__cell${showSecret && isSecret ? ' ch-grid__cell--secret' : ''}`}
+                >
+                  {word}
+                </div>
+              )
+            })}
+          </div>
+        )}
         {gs.phase === 'reveal' && (
           <div className="ch-header__role">
             {amIChameleon
-              ? "You are the Chameleon! You don't know the secret word."
-              : `The secret card is: ${gs.secretWord}`
+              ? "You are the Chameleon! You don't know which word is the secret."
+              : `The secret word is highlighted above.`
             }
           </div>
         )}
-        {gs.phase !== 'reveal' && gs.secretWord && !amIChameleon && (
+        {gs.phase !== 'reveal' && !amIChameleon && (
           <div className="ch-header__role ch-header__role--secret">
-            Secret card: <strong>{gs.secretWord}</strong>
+            You know the secret word — give good clues!
           </div>
         )}
         {gs.phase !== 'reveal' && amIChameleon && (
@@ -908,8 +941,8 @@ export default function Chameleon(): ReactElement {
             <div className="ch-phase-panel">
               <p className="ch-phase-panel__desc">
                 {amIChameleon
-                  ? 'You are the Chameleon. Pay attention to what others say and try to blend in!'
-                  : 'Memorize the secret card. Take turns saying one word that relates to it.'}
+                  ? 'You are the Chameleon. Study the 16 words above and pay attention to what others say — try to blend in!'
+                  : 'The secret word is highlighted in the grid above. Take turns saying one word that relates to it.'}
               </p>
             </div>
           )}

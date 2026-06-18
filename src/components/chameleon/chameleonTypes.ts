@@ -30,6 +30,8 @@ export interface ChameleonGameState {
   phase: RoundPhase
   topic: string
   secretWord: string
+  gridWords: string[]
+  secretWordIndex: number
   chameleonId: string
   words: PlayerWord[]
   votes: PlayerVote[]
@@ -58,13 +60,13 @@ export type ToClientMsg =
   | { type: 'player-left'; peerId: string; name: string }
   | { type: 'chat'; name: string; text: string }
   | { type: 'game-started'; totalRounds: number }
-  | { type: 'round-started'; topic: string; yourRole: 'chameleon' | 'player'; secretWord: string; speakingOrder: string[] }
+  | { type: 'round-started'; topic: string; yourRole: 'chameleon' | 'player'; secretWord: string; gridWords: string[]; secretWordIndex: number; speakingOrder: string[] }
   | { type: 'your-turn'; speakerName: string }
   | { type: 'word-submitted'; peerId: string; name: string; word: string }
   | { type: 'speaking-done'; words: PlayerWord[] }
   | { type: 'voting-started' }
   | { type: 'vote-cast'; voterId: string }
-  | { type: 'voting-done'; votes: PlayerVote[]; chameleonId: string; secretWord: string }
+  | { type: 'voting-done'; votes: PlayerVote[]; chameleonId: string; secretWord: string; gridWords: string[]; secretWordIndex: number }
   | { type: 'chameleon-guess-result'; correct: boolean; guess: string }
   | { type: 'round-over'; scores: ChameleonPlayer[] }
   | { type: 'game-over'; scores: ChameleonPlayer[] }
