@@ -664,16 +664,12 @@ export default function Chameleon(): ReactElement {
     }
   }
 
-  function handleChameleonGuess(e: React.FormEvent) {
-    e.preventDefault()
-    const word = myWord.trim()
-    if (!word) return
+  function handleChameleonGridGuess(word: string) {
     if (isHostRef.current) {
       hostHandleChameleonGuess(myPeerIdRef.current, word)
     } else {
       hostConnRef.current?.send({ type: 'chameleon-guess', word } satisfies ToHostMsg)
     }
-    setMyWord('')
   }
 
   function handleReadyForNext() {
@@ -903,10 +899,15 @@ export default function Chameleon(): ReactElement {
             {gs.gridWords.map((word, i) => {
               const isSecret = i === gs.secretWordIndex
               const showSecret = !amIChameleon || gs.phase === 'results'
+              const clickable = needsChameleonGuess
               return (
                 <div
                   key={i}
-                  className={`ch-grid__cell${showSecret && isSecret ? ' ch-grid__cell--secret' : ''}`}
+                  className={`ch-grid__cell${showSecret && isSecret ? ' ch-grid__cell--secret' : ''}${clickable ? ' ch-grid__cell--guessable' : ''}`}
+                  onClick={clickable ? () => handleChameleonGridGuess(word) : undefined}
+                  role={clickable ? 'button' : undefined}
+                  tabIndex={clickable ? 0 : undefined}
+                  onKeyDown={clickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') handleChameleonGridGuess(word) } : undefined}
                 >
                   {word}
                 </div>
@@ -1033,19 +1034,9 @@ export default function Chameleon(): ReactElement {
 
               {/* Chameleon guess */}
               {needsChameleonGuess && (
-                <form className="ch-word-form" onSubmit={handleChameleonGuess} style={{ marginTop: '1rem' }}>
-                  <p className="ch-waiting">You were caught! Guess the secret word to still win:</p>
-                  <input
-                    className="pvp-lobby__input"
-                    type="text"
-                    value={myWord}
-                    onChange={(e) => setMyWord(e.target.value)}
-                    placeholder="Guess the secret word…"
-                    maxLength={64}
-                    autoFocus
-                  />
-                  <button className="hol-btn" type="submit" disabled={!myWord.trim()}>Guess</button>
-                </form>
+                <p className="ch-waiting" style={{ marginTop: '1rem', fontSize: '0.95rem', fontWeight: 600, color: 'var(--accent)' }}>
+                  You were caught! Click a word on the board above to guess the secret word and still win!
+                </p>
               )}
 
               {gs.chameleonGuess !== null && (

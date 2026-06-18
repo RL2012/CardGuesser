@@ -2498,6 +2498,21 @@
   font-weight: 700;
 }
 
+.ch-grid__cell--guessable {
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.ch-grid__cell--guessable:hover {
+  background: var(--surface-hover);
+  border-color: var(--accent);
+  transform: scale(1.04);
+}
+
+.ch-grid__cell--guessable:active {
+  transform: scale(0.97);
+}
+
 .ch-body {
   display: flex;
   flex: 1;
