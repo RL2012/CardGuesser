@@ -129,11 +129,11 @@ git push
 
 ## README.md synchronization
 
-Whenever `CLAUDE.md`, `deepseek.md`, or `README.md` is updated, **always update all three files** so they stay in sync. Changes to architecture, game modes, commands, or conventions described in one must be reflected in the others.
+Whenever `CLAUDE.md` or `README.md` is updated, **always update both files** so they stay in sync. Changes to architecture, game modes, commands, or conventions described in one must be reflected in the other.
 
 ## Global CLAUDE.md propagation
 
-The global orchestrator context lives at `C:\Users\milyu\source\repos\CLAUDE.md`. It contains the authoritative per-repo summary that cross-repo sessions and subagents read to understand this project.
+The global orchestrator context lives at `C:\Users\a1670\Documents\GitHub\CLAUDE.md`. It contains the authoritative per-repo summary that cross-repo sessions and subagents read to understand this project.
 
 After any significant change in this repo, **also update the `### CardGuesser` section in both global files** so they stay accurate.
 
@@ -152,4 +152,4 @@ Update the global files when you:
 
 ### What to update
 
-Find the `### CardGuesser` section in `C:\Users\milyu\source\repos\CLAUDE.md` and update whichever parts accurately reflect your change: the feature list, the key files table, the stack description, the commands block, or the card data notes.
+Find the `### CardGuesser` section in `C:\Users\a1670\Documents\GitHub\CLAUDE.md` and update whichever parts accurately reflect your change: the feature list, the key files table, the stack description, the commands block, or the card data notes.

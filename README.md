@@ -92,7 +92,7 @@ npm run format       # Prettier
 npm run fetch-cards  # Regenerate public/cards.txt from YGOProDeck API
 ```
 
-Card data is pre-fetched into `public/cards.txt` (pipe-delimited, 15 columns: `id|name|frameType|type|attribute|atk|def|level|race|archetype|sets(JSON)|banTcg|views|viewsWeek|tcgDate`) so the app doesn't need to hit the API on every load. Run `npm run fetch-cards` to refresh it.
+Card data is pre-fetched into `public/cards.txt` (pipe-delimited, 16 columns: `id|name|frameType|type|attribute|atk|def|level|race|archetype|sets(JSON)|banTcg|views|viewsWeek|tcgDate|tcgplayerPrice`) so the app doesn't need to hit the API on every load. Run `npm run fetch-cards` to refresh it.
 
 ---
 
