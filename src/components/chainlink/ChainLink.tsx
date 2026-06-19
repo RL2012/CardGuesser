@@ -156,6 +156,7 @@ export default function ChainLink() {
           return next
         })
         addChat('System', `${msg.name} joined`)
+        setLobbyPhase('room')
       } else if (msg.type === 'chat') {
         hostBroadcast({ type: 'chat', name: msg.name, text: msg.text })
         addChat(msg.name, msg.text)

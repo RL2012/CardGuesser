@@ -197,6 +197,19 @@ export default function MultiplayerLobby(props: MultiplayerLobbyProps) {
   return (
     <div className="pvp-room">
       <div className="pvp-room__content">
+        {isHost && myPeerId && (
+          <section className="pvp-lobby__section">
+            <p className="pvp-lobby__label">
+              {copyBtnLabel.replace('{n}', String(maxPlayers - 1))}
+            </p>
+            <div className="pvp-lobby__id-row">
+              <code className="pvp-lobby__id">{myPeerId}</code>
+              <button className="pvp-lobby__copy-btn" onClick={onCopy}>
+                {copied ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
+          </section>
+        )}
         <ul className="pvp-lobby__player-list">
           {players.map((p) => (
             <li key={p.peerId} className="pvp-lobby__player-row">
