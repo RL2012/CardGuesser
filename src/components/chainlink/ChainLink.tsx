@@ -138,20 +138,17 @@ export default function ChainLink() {
   // ── Host helpers ────────────────────────────────────────────────────────
 
   function upsertPlayer(player: PlayerInfo) {
-    setPlayers((prev) => {
-      const idx = prev.findIndex((p) => p.peerId === player.peerId)
-      const next = idx >= 0 ? Object.assign([...prev], { [idx]: player }) : [...prev, player]
-      playersRef.current = next
-      return next
-    })
+    const { current } = playersRef
+    const idx = current.findIndex((p) => p.peerId === player.peerId)
+    const next = idx >= 0 ? Object.assign([...current], { [idx]: player }) : [...current, player]
+    playersRef.current = next
+    setPlayers(next)
   }
 
   function removePlayer(peerId: string) {
-    setPlayers((prev) => {
-      const next = prev.filter((p) => p.peerId !== peerId)
-      playersRef.current = next
-      return next
-    })
+    const next = playersRef.current.filter((p) => p.peerId !== peerId)
+    playersRef.current = next
+    setPlayers(next)
   }
 
   // ── Host game logic ─────────────────────────────────────────────────────
