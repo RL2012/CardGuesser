@@ -1,7 +1,7 @@
 import { getLeaderboard } from '../services/leaderboard'
 
 interface Props {
-  onPlay: (game: 'card-guesser' | 'higher-or-lower' | 'card-categories' | 'codenames' | 'connections' | 'chameleon' | 'wordle') => void
+  onPlay: (game: 'card-guesser' | 'higher-or-lower' | 'card-categories' | 'codenames' | 'connections' | 'chameleon' | 'wordle' | 'trivia') => void
 }
 
 function LeaderTable({ entries }: { entries: ReturnType<typeof getLeaderboard> }) {
@@ -44,6 +44,7 @@ export default function Homepage({ onPlay }: Props) {
   const cxnBoard = getLeaderboard('connections')
   const chBoard = getLeaderboard('chameleon')
   const wlBoard = getLeaderboard('wordle')
+  const trBoard = getLeaderboard('trivia')
 
   return (
     <div className="homepage">
@@ -128,6 +129,19 @@ export default function Homepage({ onPlay }: Props) {
 
         <div className="game-mode-card">
           <div className="game-mode-card__header">
+            <span className="game-mode-card__icon">⚡</span>
+            <h2 className="game-mode-card__title">Trivia Blitz</h2>
+          </div>
+          <p className="game-mode-card__desc">
+            Rapid-fire Yu-Gi-Oh! trivia. Answer questions about card attributes, archetypes, races, types, banlist statuses, and ATK comparisons. Build streaks for bonus points and answer fast for extra time bonuses.
+          </p>
+          <button className="hol-btn game-mode-card__btn" onClick={() => onPlay('trivia')}>
+            Play
+          </button>
+        </div>
+
+        <div className="game-mode-card">
+          <div className="game-mode-card__header">
             <span className="game-mode-card__icon">🦎</span>
             <h2 className="game-mode-card__title">Chameleon</h2>
           </div>
@@ -181,6 +195,11 @@ export default function Homepage({ onPlay }: Props) {
         <section className="leaderboard-section">
           <h3 className="leaderboard-section__title">Card Wordle</h3>
           <LeaderTable entries={wlBoard} />
+        </section>
+
+        <section className="leaderboard-section">
+          <h3 className="leaderboard-section__title">Trivia Blitz</h3>
+          <LeaderTable entries={trBoard} />
         </section>
       </div>
     </div>

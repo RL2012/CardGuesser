@@ -8,6 +8,7 @@ import Codenames from './components/codenames/Codenames'
 import Connections from './components/connections/Connections'
 import Chameleon from './components/chameleon/Chameleon'
 import CardWordle from './components/wordle/CardWordle'
+import TriviaBlitz from './components/trivia/TriviaBlitz'
 import Homepage from './components/Homepage'
 import './App.css'
 
@@ -20,6 +21,7 @@ type GameMode =
   | 'connections'
   | 'chameleon'
   | 'wordle'
+  | 'trivia'
 
 export default function App() {
   const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark')
@@ -77,6 +79,12 @@ export default function App() {
           >
             Card Wordle
           </button>
+          <button
+            className={`game-tab${activeGame === 'trivia' ? ' game-tab--active' : ''}`}
+            onClick={() => setActiveGame('trivia')}
+          >
+            Trivia Blitz
+          </button>
           <span className="game-tabs__sep" />
           <span className="game-tabs__label">Multiplayer</span>
           <button
@@ -118,6 +126,7 @@ export default function App() {
           {activeGame === 'connections' && <Connections />}
           {activeGame === 'chameleon' && <Chameleon />}
           {activeGame === 'wordle' && <CardWordle />}
+          {activeGame === 'trivia' && <TriviaBlitz />}
         </>
       )}
     </div>

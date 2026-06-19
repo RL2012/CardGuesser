@@ -13,6 +13,7 @@ const KEYS = {
   connections: 'lb_connections',
   chameleon: 'lb_chameleon',
   wordle: 'lb_wordle',
+  trivia: 'lb_trivia',
 } as const
 
 export type GameKey = keyof typeof KEYS
