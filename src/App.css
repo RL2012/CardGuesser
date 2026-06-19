@@ -76,6 +76,24 @@
   cursor: default;
 }
 
+.game-tabs__sep {
+  width: 1px;
+  align-self: stretch;
+  background: var(--border);
+  margin: 0 0.25rem;
+}
+
+.game-tabs__label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  padding: 0 0.25rem;
+}
+
 /* ── Theme toggle ── */
 .theme-toggle {
   position: absolute;
@@ -2770,5 +2788,249 @@
     border-left: none;
     border-top: 1px solid var(--border);
     max-height: 220px;
+  }
+}
+
+/* ── Card Wordle ── */
+
+.wl-game {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem 1rem;
+  flex: 1;
+  overflow-y: auto;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.wl-header {
+  text-align: center;
+}
+
+.wl-header__title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem;
+}
+
+.wl-header__subtitle {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin: 0;
+  max-width: 500px;
+}
+
+.wl-column-headers {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  width: 100%;
+  padding: 0 0 0.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.wl-col-header {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  text-align: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.wl-col-header--card {
+  flex: 0 0 160px;
+  text-align: left;
+  padding-left: 0.5rem;
+}
+
+.wl-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+@keyframes wl-shake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-6px); }
+  40%       { transform: translateX(6px); }
+  60%       { transform: translateX(-3px); }
+  80%       { transform: translateX(3px); }
+}
+
+.wl-rows--shake {
+  animation: wl-shake 0.4s ease;
+}
+
+.wl-row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  animation: wl-row-in 0.2s ease;
+}
+
+@keyframes wl-row-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.wl-row--empty {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.wl-row__card {
+  flex: 0 0 160px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.wl-row__img {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+  background: var(--surface);
+}
+
+.wl-row__name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.wl-row__hints {
+  display: flex;
+  gap: 0.375rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.wl-hint-badge {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 0.45rem 0.25rem;
+  border-radius: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.wl-hint-badge--empty {
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  min-height: 1.9rem;
+}
+
+.wl-input-area {
+  width: 100%;
+  text-align: center;
+  position: relative;
+}
+
+.wl-input-area .card-search {
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.wl-input-area__hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0.5rem 0 0;
+}
+
+.wl-gameover {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.wl-gameover__title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.wl-gameover__reveal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.wl-gameover__img {
+  width: 140px;
+  height: 140px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 2px solid var(--accent);
+}
+
+.wl-gameover__name {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.wl-gameover__score {
+  font-size: 1rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+@media (max-width: 750px) {
+  .wl-col-header--card {
+    flex: 0 0 110px;
+  }
+
+  .wl-row__card {
+    flex: 0 0 110px;
+  }
+
+  .wl-row__img {
+    width: 30px;
+    height: 30px;
+  }
+
+  .wl-row__name {
+    font-size: 0.65rem;
+  }
+
+  .wl-hint-badge {
+    font-size: 0.6rem;
+    padding: 0.35rem 0.15rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .wl-col-header--card {
+    flex: 0 0 80px;
+  }
+
+  .wl-row__card {
+    flex: 0 0 80px;
+  }
+
+  .wl-row__img {
+    display: none;
   }
 }

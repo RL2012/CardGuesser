@@ -7,10 +7,19 @@ import CardCategories from './components/card-categories/CardCategories'
 import Codenames from './components/codenames/Codenames'
 import Connections from './components/connections/Connections'
 import Chameleon from './components/chameleon/Chameleon'
+import CardWordle from './components/wordle/CardWordle'
 import Homepage from './components/Homepage'
 import './App.css'
 
-type GameMode = 'home' | 'card-guesser' | 'higher-or-lower' | 'card-categories' | 'codenames' | 'connections' | 'chameleon'
+type GameMode =
+  | 'home'
+  | 'card-guesser'
+  | 'higher-or-lower'
+  | 'card-categories'
+  | 'codenames'
+  | 'connections'
+  | 'chameleon'
+  | 'wordle'
 
 export default function App() {
   const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark')
@@ -42,6 +51,8 @@ export default function App() {
           >
             Home
           </button>
+          <span className="game-tabs__sep" />
+          <span className="game-tabs__label">Solo</span>
           <button
             className={`game-tab${activeGame === 'card-guesser' ? ' game-tab--active' : ''}`}
             onClick={() => setActiveGame('card-guesser')}
@@ -55,6 +66,20 @@ export default function App() {
             Higher or Lower
           </button>
           <button
+            className={`game-tab${activeGame === 'connections' ? ' game-tab--active' : ''}`}
+            onClick={() => setActiveGame('connections')}
+          >
+            Connections
+          </button>
+          <button
+            className={`game-tab${activeGame === 'wordle' ? ' game-tab--active' : ''}`}
+            onClick={() => setActiveGame('wordle')}
+          >
+            Card Wordle
+          </button>
+          <span className="game-tabs__sep" />
+          <span className="game-tabs__label">Multiplayer</span>
+          <button
             className={`game-tab${activeGame === 'card-categories' ? ' game-tab--active' : ''}`}
             onClick={() => setActiveGame('card-categories')}
           >
@@ -65,12 +90,6 @@ export default function App() {
             onClick={() => setActiveGame('codenames')}
           >
             Codenames
-          </button>
-          <button
-            className={`game-tab${activeGame === 'connections' ? ' game-tab--active' : ''}`}
-            onClick={() => setActiveGame('connections')}
-          >
-            Connections
           </button>
           <button
             className={`game-tab${activeGame === 'chameleon' ? ' game-tab--active' : ''}`}
@@ -98,6 +117,7 @@ export default function App() {
           {activeGame === 'codenames' && <Codenames />}
           {activeGame === 'connections' && <Connections />}
           {activeGame === 'chameleon' && <Chameleon />}
+          {activeGame === 'wordle' && <CardWordle />}
         </>
       )}
     </div>

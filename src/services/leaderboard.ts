@@ -12,6 +12,7 @@ const KEYS = {
   cardCategories: 'lb_card_categories',
   connections: 'lb_connections',
   chameleon: 'lb_chameleon',
+  wordle: 'lb_wordle',
 } as const
 
 export type GameKey = keyof typeof KEYS

@@ -1,7 +1,7 @@
 import { getLeaderboard } from '../services/leaderboard'
 
 interface Props {
-  onPlay: (game: 'card-guesser' | 'higher-or-lower' | 'card-categories' | 'codenames' | 'connections' | 'chameleon') => void
+  onPlay: (game: 'card-guesser' | 'higher-or-lower' | 'card-categories' | 'codenames' | 'connections' | 'chameleon' | 'wordle') => void
 }
 
 function LeaderTable({ entries }: { entries: ReturnType<typeof getLeaderboard> }) {
@@ -43,6 +43,7 @@ export default function Homepage({ onPlay }: Props) {
   const ccBoard = getLeaderboard('cardCategories')
   const cxnBoard = getLeaderboard('connections')
   const chBoard = getLeaderboard('chameleon')
+  const wlBoard = getLeaderboard('wordle')
 
   return (
     <div className="homepage">
@@ -114,6 +115,19 @@ export default function Homepage({ onPlay }: Props) {
 
         <div className="game-mode-card">
           <div className="game-mode-card__header">
+            <span className="game-mode-card__icon">🟩</span>
+            <h2 className="game-mode-card__title">Card Wordle</h2>
+          </div>
+          <p className="game-mode-card__desc">
+            Guess the secret Yu-Gi-Oh! card in 6 tries. Each guess reveals how its properties — Attribute, Type, Race, Archetype, Level, ATK, DEF, and Banlist status — match the target with colour-coded hints.
+          </p>
+          <button className="hol-btn game-mode-card__btn" onClick={() => onPlay('wordle')}>
+            Play
+          </button>
+        </div>
+
+        <div className="game-mode-card">
+          <div className="game-mode-card__header">
             <span className="game-mode-card__icon">🦎</span>
             <h2 className="game-mode-card__title">Chameleon</h2>
           </div>
@@ -162,6 +176,11 @@ export default function Homepage({ onPlay }: Props) {
         <section className="leaderboard-section">
           <h3 className="leaderboard-section__title">Chameleon</h3>
           <LeaderTable entries={chBoard} />
+        </section>
+
+        <section className="leaderboard-section">
+          <h3 className="leaderboard-section__title">Card Wordle</h3>
+          <LeaderTable entries={wlBoard} />
         </section>
       </div>
     </div>
