@@ -14,7 +14,6 @@ const KEYS = {
   chameleon: 'lb_chameleon',
   wordle: 'lb_wordle',
   trivia: 'lb_trivia',
-  chainLink: 'lb_chain_link',
 } as const
 
 export type GameKey = keyof typeof KEYS
