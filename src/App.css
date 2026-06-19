@@ -20,7 +20,6 @@
   font-weight: 700;
 }
 
-
 .app-main {
   display: flex;
   flex: 1;
@@ -190,16 +189,16 @@
 /* ── Theme toggle ── */
 .theme-toggle {
   position: absolute;
-  top: 50%;
-  left: 1.25rem;
-  transform: translateY(-50%);
+  top: 0.875rem;
+  right: 1.25rem;
   background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text-muted);
   border-radius: 6px;
-  padding: 0.3rem 0.75rem;
-  font-size: 0.8rem;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.75rem;
   cursor: pointer;
+  z-index: 2;
   transition:
     background 0.15s,
     color 0.15s;
