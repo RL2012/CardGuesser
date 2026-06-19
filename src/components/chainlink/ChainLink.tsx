@@ -212,9 +212,10 @@ export default function ChainLink() {
           setTimeout(() => conn.close(), 200)
           return
         }
+        const hostInfo: PlayerInfo = { peerId: myPeerIdRef.current, name: myNameRef.current }
         const newPlayer: PlayerInfo = { peerId: conn.peer, name: msg.name }
         upsertPlayer(newPlayer)
-        conn.send({ type: 'welcome', players: playersRef.current } satisfies ToClientMsg)
+        conn.send({ type: 'player-list', players: [hostInfo, ...playersRef.current] } satisfies ToClientMsg)
         broadcast({ type: 'player-joined', player: newPlayer } satisfies ToClientMsg, conn.peer)
         addChat({ name: '', text: `${msg.name} joined the room.`, self: false })
       }
@@ -292,7 +293,7 @@ export default function ChainLink() {
   // ── Apply message (guest) ───────────────────────────────────────────────
 
   function applyMsg(msg: ToClientMsg) {
-    if (msg.type === 'welcome') {
+    if (msg.type === 'player-list') {
       setPlayers(msg.players)
     } else if (msg.type === 'player-joined') {
       upsertPlayer(msg.player)
@@ -300,8 +301,6 @@ export default function ChainLink() {
     } else if (msg.type === 'player-left') {
       removePlayer(msg.peerId)
       addChat({ name: '', text: `${msg.name} left the room.`, self: false })
-    } else if (msg.type === 'player-list') {
-      setPlayers(msg.players)
     } else if (msg.type === 'chat') {
       addChat({ name: msg.name, text: msg.text, self: false })
     } else if (msg.type === 'game-start') {
