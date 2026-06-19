@@ -202,8 +202,6 @@ export default function ChainLink() {
   // ── Connection wiring ───────────────────────────────────────────────────
 
   const wireClientConn = useCallback((conn: AnyDataConnection) => {
-    clientConnsRef.current.set(conn.peer, conn)
-
     conn.on('data', (raw) => {
       const msg = raw as ToHostMsg
       if (msg.type === 'hello') {
@@ -213,10 +211,11 @@ export default function ChainLink() {
           return
         }
         const hostInfo: PlayerInfo = { peerId: myPeerIdRef.current, name: myNameRef.current }
-        const newPlayer: PlayerInfo = { peerId: conn.peer, name: msg.name }
+        const newPlayer: PlayerInfo = { peerId: msg.peerId, name: msg.name }
         upsertPlayer(newPlayer)
+        clientConnsRef.current.set(msg.peerId, conn)
         conn.send({ type: 'player-list', players: [hostInfo, ...playersRef.current] } satisfies ToClientMsg)
-        broadcast({ type: 'player-joined', player: newPlayer } satisfies ToClientMsg, conn.peer)
+        broadcast({ type: 'player-joined', player: newPlayer } satisfies ToClientMsg, msg.peerId)
         addChat({ name: '', text: `${msg.name} joined the room.`, self: false })
       }
       if (msg.type === 'chat') {
@@ -229,9 +228,10 @@ export default function ChainLink() {
     })
 
     conn.on('close', () => {
-      const leaving = playersRef.current.find((p) => p.peerId === conn.peer)
-      clientConnsRef.current.delete(conn.peer)
-      removePlayer(conn.peer)
+      const pid = conn.peer
+      const leaving = playersRef.current.find((p) => p.peerId === pid)
+      clientConnsRef.current.delete(pid)
+      removePlayer(pid)
       if (leaving) {
         if (inGameRef.current) {
           inGameRef.current = false
@@ -239,7 +239,7 @@ export default function ChainLink() {
           broadcast({ type: 'player-disconnected-reset', name: leaving.name } satisfies ToClientMsg)
           addChat({ name: '', text: `${leaving.name} disconnected. The game has been reset.`, self: false })
         } else {
-          broadcast({ type: 'player-left', peerId: conn.peer, name: leaving.name } satisfies ToClientMsg)
+          broadcast({ type: 'player-left', peerId: pid, name: leaving.name } satisfies ToClientMsg)
           addChat({ name: '', text: `${leaving.name} left the room.`, self: false })
         }
       }
@@ -260,7 +260,7 @@ export default function ChainLink() {
 
     conn.on('open', () => {
       clearTimeout(connTimeout)
-      conn.send({ type: 'hello', name: myNameRef.current } satisfies ToHostMsg)
+      conn.send({ type: 'hello', name: myNameRef.current, peerId: myPeerIdRef.current } satisfies ToHostMsg)
     })
     conn.on('data', (raw) => {
       const msg = raw as ToClientMsg

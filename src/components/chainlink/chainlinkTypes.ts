@@ -12,7 +12,7 @@ export interface ChainEntry {
 }
 
 export type ToHostMsg =
-  | { type: 'hello'; name: string }
+  | { type: 'hello'; name: string; peerId: string }
   | { type: 'chat'; name: string; text: string }
   | { type: 'submit-card'; cardId: number; cardName: string }
 
