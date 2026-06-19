@@ -94,6 +94,7 @@ export default function ChainLink() {
   })
 
   useEffect(() => { cardsRef.current = cards }, [cards])
+  useEffect(() => { playersRef.current = players }, [players])
 
   const clearTimer = () => {
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null }
