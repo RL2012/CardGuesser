@@ -965,6 +965,13 @@
   gap: 0.75rem;
 }
 
+/* Chat sidebar inside pvp-room (fixed width, matching other games) */
+.pvp-room .pvp-chat {
+  flex: 0 0 260px;
+  border-left: 1px solid var(--border);
+  border-radius: 0;
+}
+
 /* ── Chat ── */
 .pvp-chat {
   flex: 1;
