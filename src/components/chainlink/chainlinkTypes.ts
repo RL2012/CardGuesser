@@ -12,15 +12,18 @@ export interface ChainEntry {
 }
 
 export type ToHostMsg =
-  | { type: 'hello'; name: string; peerId: string }
+  | { type: 'hello'; name: string }
   | { type: 'chat'; name: string; text: string }
   | { type: 'submit-card'; cardId: number; cardName: string }
 
 export type ToClientMsg =
-  | { type: 'player-list'; players: import('../../multiplayer/shared').PlayerInfo[] }
+  | { type: 'welcome'; players: import('../../multiplayer/shared').PlayerInfo[] }
   | { type: 'player-joined'; player: import('../../multiplayer/shared').PlayerInfo }
+  | { type: 'player-list'; players: import('../../multiplayer/shared').PlayerInfo[] }
   | { type: 'player-left'; peerId: string; name: string }
+  | { type: 'player-disconnected-reset'; name: string }
   | { type: 'chat'; name: string; text: string }
+  | { type: 'game-in-progress' }
   | { type: 'game-start'; firstCard: { id: number; name: string }; playerOrder: string[]; lives: Record<string, number> }
   | { type: 'turn-start'; playerPeerId: string; lastCard: { id: number; name: string }; deadline: number }
   | { type: 'chain-correct'; playerPeerId: string; cardId: number; cardName: string; nextPlayerPeerId: string; deadline: number; chainLength: number }
