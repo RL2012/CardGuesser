@@ -101,7 +101,14 @@ export function generateQuestion(cards: Card[]): Question {
       if (cardWithArch.length === 0) return generateQuestion(cards)
       const card = pick(cardWithArch)
       const arch = card.archetype!
-      const censoredName = card.name.replace(new RegExp(arch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '***')
+      const escaped = arch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      let censoredName = card.name.replace(new RegExp(escaped, 'gi'), '***')
+      if (censoredName === card.name) {
+        censoredName = card.name
+          .split(' ')
+          .map((w) => (new RegExp(escaped, 'i').test(w) ? '***' : w))
+          .join(' ')
+      }
       const allArchs = getDistinctValues(monsters, (c) => c.archetype)
       const wrongs = pickN(
         allArchs.filter((a) => a !== card.archetype),
