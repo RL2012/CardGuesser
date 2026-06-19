@@ -210,11 +210,10 @@ export default function ChainLink() {
           setTimeout(() => conn.close(), 200)
           return
         }
-        const hostInfo: PlayerInfo = { peerId: myPeerIdRef.current, name: myNameRef.current }
         const newPlayer: PlayerInfo = { peerId: msg.peerId, name: msg.name }
         upsertPlayer(newPlayer)
         clientConnsRef.current.set(msg.peerId, conn)
-        conn.send({ type: 'player-list', players: [hostInfo, ...playersRef.current] } satisfies ToClientMsg)
+        conn.send({ type: 'player-list', players: playersRef.current } satisfies ToClientMsg)
         broadcast({ type: 'player-joined', player: newPlayer } satisfies ToClientMsg, msg.peerId)
         addChat({ name: '', text: `${msg.name} joined the room.`, self: false })
       }
@@ -578,8 +577,8 @@ export default function ChainLink() {
           {players.map((p) => (
             <li key={p.peerId} className="pvp-lobby__player-row">
               <span className="pvp-lobby__dot pvp-lobby__dot--online" />
-              <span className="pvp-lobby__player-name">{p.name}{p.peerId === myPeerId ? ' (you)' : ''}</span>
-              {p.peerId === myPeerId && isHost && <span className="pvp-lobby__tag pvp-lobby__tag--host">HOST</span>}
+              <span className="pvp-lobby__player-name">{p.name}</span>
+              {p.peerId === myPeerId && <span className="pvp-lobby__tag" style={{ color: 'var(--success)', borderColor: 'var(--success)' }}>YOU</span>}
             </li>
           ))}
           {players.length === 0 && <li className="pvp-lobby__player-row pvp-lobby__player-row--empty">No players</li>}
