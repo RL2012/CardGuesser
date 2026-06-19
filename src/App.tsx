@@ -9,11 +9,13 @@ import Connections from './components/connections/Connections'
 import Chameleon from './components/chameleon/Chameleon'
 import CardWordle from './components/wordle/CardWordle'
 import TriviaBlitz from './components/trivia/TriviaBlitz'
+import Leaderboards from './components/Leaderboards'
 import Homepage from './components/Homepage'
 import './App.css'
 
 type GameMode =
   | 'home'
+  | 'leaderboards'
   | 'card-guesser'
   | 'higher-or-lower'
   | 'card-categories'
@@ -25,6 +27,7 @@ type GameMode =
 
 export default function App() {
   const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark')
+  const [menuOpen, setMenuOpen] = useState(false)
   const [activeGame, setActiveGame] = useState<GameMode>('home')
 
   useEffect(() => {
@@ -46,42 +49,55 @@ export default function App() {
           {isDark ? 'Light mode' : 'Dark mode'}
         </button>
         <h1>Card Guesser</h1>
-        <nav className="game-tabs">
+        <button
+          className="hamburger"
+          onClick={() => setMenuOpen((o) => !o)}
+          aria-label="Toggle menu"
+        >
+          <span className={`hamburger__line${menuOpen ? ' hamburger__line--open' : ''}`} />
+        </button>
+        <nav className={`game-tabs${menuOpen ? ' game-tabs--open' : ''}`}>
           <button
             className={`game-tab${activeGame === 'home' ? ' game-tab--active' : ''}`}
-            onClick={() => setActiveGame('home')}
+            onClick={() => { setActiveGame('home'); setMenuOpen(false) }}
           >
             Home
+          </button>
+          <button
+            className={`game-tab${activeGame === 'leaderboards' ? ' game-tab--active' : ''}`}
+            onClick={() => { setActiveGame('leaderboards'); setMenuOpen(false) }}
+          >
+            Leaderboards
           </button>
           <span className="game-tabs__sep" />
           <span className="game-tabs__label">Solo</span>
           <button
             className={`game-tab${activeGame === 'card-guesser' ? ' game-tab--active' : ''}`}
-            onClick={() => setActiveGame('card-guesser')}
+            onClick={() => { setActiveGame('card-guesser'); setMenuOpen(false) }}
           >
             Card Guesser
           </button>
           <button
             className={`game-tab${activeGame === 'higher-or-lower' ? ' game-tab--active' : ''}`}
-            onClick={() => setActiveGame('higher-or-lower')}
+            onClick={() => { setActiveGame('higher-or-lower'); setMenuOpen(false) }}
           >
             Higher or Lower
           </button>
           <button
             className={`game-tab${activeGame === 'connections' ? ' game-tab--active' : ''}`}
-            onClick={() => setActiveGame('connections')}
+            onClick={() => { setActiveGame('connections'); setMenuOpen(false) }}
           >
             Connections
           </button>
           <button
             className={`game-tab${activeGame === 'wordle' ? ' game-tab--active' : ''}`}
-            onClick={() => setActiveGame('wordle')}
+            onClick={() => { setActiveGame('wordle'); setMenuOpen(false) }}
           >
             Card Wordle
           </button>
           <button
             className={`game-tab${activeGame === 'trivia' ? ' game-tab--active' : ''}`}
-            onClick={() => setActiveGame('trivia')}
+            onClick={() => { setActiveGame('trivia'); setMenuOpen(false) }}
           >
             Trivia Blitz
           </button>
@@ -89,28 +105,31 @@ export default function App() {
           <span className="game-tabs__label">Multiplayer</span>
           <button
             className={`game-tab${activeGame === 'card-categories' ? ' game-tab--active' : ''}`}
-            onClick={() => setActiveGame('card-categories')}
+            onClick={() => { setActiveGame('card-categories'); setMenuOpen(false) }}
           >
             Card Categories
           </button>
           <button
             className={`game-tab${activeGame === 'codenames' ? ' game-tab--active' : ''}`}
-            onClick={() => setActiveGame('codenames')}
+            onClick={() => { setActiveGame('codenames'); setMenuOpen(false) }}
           >
             Codenames
           </button>
           <button
             className={`game-tab${activeGame === 'chameleon' ? ' game-tab--active' : ''}`}
-            onClick={() => setActiveGame('chameleon')}
+            onClick={() => { setActiveGame('chameleon'); setMenuOpen(false) }}
           >
             Chameleon
           </button>
         </nav>
+        {menuOpen && <div className="menu-overlay" onClick={() => setMenuOpen(false)} />}
       </header>
 
       {activeGame === 'home' && (
         <Homepage onPlay={(game) => setActiveGame(game as GameMode)} />
       )}
+
+      {activeGame === 'leaderboards' && status === 'succeeded' && <Leaderboards />}
 
       {activeGame !== 'home' && status === 'loading' && <p className="status-message">Loading cards…</p>}
       {activeGame !== 'home' && status === 'failed' && (
