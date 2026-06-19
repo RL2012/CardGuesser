@@ -100,19 +100,20 @@ export function generateQuestion(cards: Card[]): Question {
       const cardWithArch = monsters.filter((c) => c.archetype)
       if (cardWithArch.length === 0) return generateQuestion(cards)
       const card = pick(cardWithArch)
+      const arch = card.archetype!
+      const censoredName = card.name.replace(new RegExp(arch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '***')
       const allArchs = getDistinctValues(monsters, (c) => c.archetype)
       const wrongs = pickN(
         allArchs.filter((a) => a !== card.archetype),
         3,
       )
       if (wrongs.length < 3) return generateQuestion(cards)
-      const options = shuffle([card.archetype!, ...wrongs])
+      const options = shuffle([arch, ...wrongs])
       return {
         type,
-        prompt: `What archetype does "${card.name}" belong to?`,
+        prompt: `What archetype does "${censoredName}" belong to?`,
         options,
-        correctIndex: options.indexOf(card.archetype!),
-        cardImageId: card.id,
+        correctIndex: options.indexOf(arch),
       }
     }
 
