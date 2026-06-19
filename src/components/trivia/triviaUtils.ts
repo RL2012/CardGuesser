@@ -61,6 +61,16 @@ function getDistinctValues<T>(cards: Card[], getter: (c: Card) => T | null | und
   return [...seen]
 }
 
+function formatFrameType(raw: string): string {
+  return raw
+    .split('_')
+    .map((w) => {
+      if (w === 'xyz') return 'XYZ'
+      return w.charAt(0).toUpperCase() + w.slice(1)
+    })
+    .join(' ')
+}
+
 export function generateQuestion(cards: Card[]): Question {
   const monsters = cards.filter(
     (c) =>
@@ -123,13 +133,15 @@ export function generateQuestion(cards: Card[]): Question {
     case 'frameType': {
       const card = pick(monsters)
       const allFrames = getDistinctValues(monsters, (c) => c.frameType)
-      const wrongs = pickN(allFrames.filter((f) => f !== card.frameType), 3)
-      const options = shuffle([card.frameType, ...wrongs])
+      const formatted = allFrames.map(formatFrameType)
+      const correctFormatted = formatFrameType(card.frameType)
+      const wrongs = pickN(formatted.filter((f) => f !== correctFormatted), 3)
+      const options = shuffle([correctFormatted, ...wrongs])
       return {
         type,
         prompt: `What type of monster is "${card.name}"?`,
         options,
-        correctIndex: options.indexOf(card.frameType),
+        correctIndex: options.indexOf(correctFormatted),
         cardImageId: card.id,
       }
     }
