@@ -84,6 +84,8 @@ export default function ChainLink() {
   const playersRef = useRef<PlayerInfo[]>([])
   const inGameRef = useRef(false)
   const cardsRef = useRef(cards)
+  const chainRef = useRef<ChainEntry[]>([])
+  const livesRef = useRef<Record<string, number>>({})
   const chatEndRef = useRef<HTMLDivElement | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hostGameRef = useRef({
@@ -95,6 +97,21 @@ export default function ChainLink() {
 
   useEffect(() => { cardsRef.current = cards }, [cards])
   useEffect(() => { playersRef.current = players }, [players])
+
+  const updateChain = (val: ChainEntry[] | ((prev: ChainEntry[]) => ChainEntry[])) => {
+    setChain((prev) => {
+      const next = typeof val === 'function' ? val(prev) : val
+      chainRef.current = next
+      return next
+    })
+  }
+  const updateLives = (val: Record<string, number> | ((prev: Record<string, number>) => Record<string, number>)) => {
+    setLives((prev) => {
+      const next = typeof val === 'function' ? val(prev) : val
+      livesRef.current = next
+      return next
+    })
+  }
 
   const clearTimer = () => {
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null }
@@ -141,9 +158,9 @@ export default function ChainLink() {
 
   const hostHandleTimeout = (peerId: string) => {
     if (hostGameRef.current.playerOrder[hostGameRef.current.currentIdx] !== peerId) return
-    const newLives = { ...lives }
+    const newLives = { ...livesRef.current }
     newLives[peerId] = Math.max(0, (newLives[peerId] ?? MAX_LIVES) - 1)
-    setLives(newLives)
+    updateLives(newLives)
     broadcast({ type: 'chain-wrong', playerPeerId: peerId, lives: newLives, nextPlayerPeerId: '', deadline: 0, cardId: null, cardName: null })
     setFeedback({ correct: false })
     setTimeout(() => { setFeedback(null); hostAdvancePlayer() }, 1500)
@@ -160,8 +177,8 @@ export default function ChainLink() {
     hostGameRef.current.usedCardIds.add(cardId)
     hostGameRef.current.lastCard = { id: cardId, name: cardName }
     const pn = playersRef.current.find((p) => p.peerId === peerId)?.name ?? peerId
-    const newChain = [...chain, { cardId, cardName, playerPeerId: peerId, playerName: pn }]
-    setChain(newChain)
+    const newChain = [...chainRef.current, { cardId, cardName, playerPeerId: peerId, playerName: pn }]
+    updateChain(newChain)
     broadcast({ type: 'chain-correct', playerPeerId: peerId, cardId, cardName, nextPlayerPeerId: '', deadline: 0, chainLength: newChain.length })
     setLastSharedProps(getSharedProperties(lastCard, card))
     setFeedback({ correct: true, cardName })
@@ -170,20 +187,21 @@ export default function ChainLink() {
 
   const hostAdvancePlayer = () => {
     const order = hostGameRef.current.playerOrder
-    const alive = order.filter((p) => (lives[p] ?? 0) > 0)
+    const curLives = livesRef.current
+    const alive = order.filter((p) => (curLives[p] ?? 0) > 0)
     if (alive.length <= 1) {
       const w = alive[0]
       const winnerName = playersRef.current.find((p) => p.peerId === w)?.name ?? w
       setWinner(winnerName)
-      broadcast({ type: 'game-over', winner: winnerName, chain: chain.map((c) => ({ cardName: c.cardName, playerName: c.playerName })), lives })
-      if (w === myPeerIdRef.current) { setFinalScore(chain.length * 10 + 50); setShowScoreEntry(true) }
+      broadcast({ type: 'game-over', winner: winnerName, chain: chainRef.current.map((c) => ({ cardName: c.cardName, playerName: c.playerName })), lives: curLives })
+      if (w === myPeerIdRef.current) { setFinalScore(chainRef.current.length * 10 + 50); setShowScoreEntry(true) }
       clearTimer()
       return
     }
     let next = (hostGameRef.current.currentIdx + 1) % order.length
     let nid = order[next]
     let tries = 0
-    while ((lives[nid] ?? 0) <= 0 && tries < order.length) { next = (next + 1) % order.length; nid = order[next]; tries++ }
+    while ((curLives[nid] ?? 0) <= 0 && tries < order.length) { next = (next + 1) % order.length; nid = order[next]; tries++ }
     hostGameRef.current.currentIdx = next
     hostStartTurn(nid)
   }
@@ -305,8 +323,8 @@ export default function ChainLink() {
     } else if (msg.type === 'game-start') {
       hostGameRef.current.lastCard = msg.firstCard
       hostGameRef.current.playerOrder = msg.playerOrder
-      setChain([])
-      setLives(msg.lives)
+      updateChain([])
+      updateLives(msg.lives)
       setWinner(null)
       setLobbyPhase('game')
       addChat({ name: '', text: 'Game started!', self: false })
@@ -317,20 +335,20 @@ export default function ChainLink() {
       hostGameRef.current.lastCard = msg.lastCard
     } else if (msg.type === 'chain-correct') {
       const nm = playersRef.current.find((p) => p.peerId === msg.playerPeerId)?.name ?? msg.playerPeerId
-      setChain((prev) => [...prev, { cardId: msg.cardId, cardName: msg.cardName, playerPeerId: msg.playerPeerId, playerName: nm }])
+      updateChain((prev) => [...prev, { cardId: msg.cardId, cardName: msg.cardName, playerPeerId: msg.playerPeerId, playerName: nm }])
       setFeedback({ correct: true, cardName: msg.cardName })
       setTimeout(() => setFeedback(null), 1500)
       setTurnDeadline(null)
       setCurrentPlayer(null)
     } else if (msg.type === 'chain-wrong') {
-      setLives(msg.lives)
+      updateLives(msg.lives)
       setFeedback({ correct: false })
       setTimeout(() => setFeedback(null), 1500)
       setTurnDeadline(null)
       setCurrentPlayer(null)
     } else if (msg.type === 'game-over') {
       setWinner(msg.winner)
-      setLives(msg.lives)
+      updateLives(msg.lives)
       cleanUpGame()
       addChat({ name: '', text: `${msg.winner} wins!`, self: false })
     } else if (msg.type === 'player-disconnected-reset') {
@@ -356,8 +374,8 @@ export default function ChainLink() {
     setPeerError(null)
     setIsHost(false)
     isHostRef.current = false
-    setChain([])
-    setLives({})
+    updateChain([])
+    updateLives({})
     setCurrentPlayer(null)
     setTurnDeadline(null)
     setFeedback(null)
@@ -436,8 +454,8 @@ export default function ChainLink() {
     hostGameRef.current.usedCardIds.add(startCard.id)
     const initialLives: Record<string, number> = {}
     order.forEach((p) => { initialLives[p] = MAX_LIVES })
-    setChain([{ cardId: startCard.id, cardName: startCard.name, playerPeerId: '', playerName: 'Start' }])
-    setLives(initialLives)
+    updateChain([{ cardId: startCard.id, cardName: startCard.name, playerPeerId: '', playerName: 'Start' }])
+    updateLives(initialLives)
     setWinner(null)
     setFeedback(null)
     inGameRef.current = true
