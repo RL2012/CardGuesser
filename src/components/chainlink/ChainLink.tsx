@@ -178,6 +178,10 @@ export default function ChainLink() {
   }
 
   const wireClientConn = (conn: AnyDataConnection) => {
+    hostConnRef.current = conn
+    conn.on('open', () => {
+      conn.send({ type: 'hello', name, peerId: myPeerIdRef.current } satisfies ToHostMsg)
+    })
     conn.on('data', (raw: unknown) => {
       const msg = raw as ToClientMsg
       if (!msg?.type) return
