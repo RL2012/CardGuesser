@@ -1,10 +1,12 @@
-import { useRef, useState, useEffect, useMemo } from 'react'
+import { useRef, useState, useEffect, useMemo, useCallback } from 'react'
 import Peer from 'peerjs'
 import { useAppSelector } from '../../hooks/hooks'
 import ScoreEntry from '../ScoreEntry'
 import { addScore } from '../../services/leaderboard'
 import { cardsShareProperty, getSharedProperties, pickStartingCard } from './chainlinkUtils'
-import { createLocalPeer } from '../card-categories/LocalTransport'
+import { createLocalPeer } from '../../multiplayer/transport'
+import MultiplayerLobby from '../../multiplayer/MultiplayerLobby'
+import type { ChatMessage } from '../../multiplayer/MultiplayerLobby'
 import {
   ICE_SERVERS,
   MAX_PLAYERS,
@@ -27,17 +29,19 @@ export default function ChainLink() {
   const cards = useAppSelector((s) => s.cards.cards)
   const cardNames = useMemo(() => cards.map((c) => c.name), [cards])
 
+  // ── MultiplayerLobby state ──
   const [name, setName] = useState(() => localStorage.getItem('cl-player-name') ?? '')
-  const [phase, setPhase] = useState<'name-entry' | 'lobby' | 'game' | 'gameover'>('name-entry')
+  const [lobbyPhase, setLobbyPhase] = useState<'setup' | 'name-entry' | 'lobby' | 'room' | 'game'>('setup')
   const [myPeerId, setMyPeerId] = useState<string | null>(null)
   const [joinId, setJoinId] = useState('')
   const [copied, setCopied] = useState(false)
   const [peerError, setPeerError] = useState<string | null>(null)
   const [players, setPlayers] = useState<PlayerInfo[]>([])
   const [isHost, setIsHost] = useState(false)
-  const [chatMessages, setChatMessages] = useState<{ id: number; name: string; text: string; self: boolean }[]>([])
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [chatInput, setChatInput] = useState('')
 
+  // ── Game state ──
   const [chain, setChain] = useState<ChainEntry[]>([])
   const [lives, setLives] = useState<Record<string, number>>({})
   const [currentPlayer, setCurrentPlayer] = useState<string | null>(null)
@@ -49,10 +53,12 @@ export default function ChainLink() {
   const [showScoreEntry, setShowScoreEntry] = useState(false)
   const [finalScore, setFinalScore] = useState(0)
 
+  // ── Search ──
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<string[]>([])
   const [searchOpen, setSearchOpen] = useState(false)
 
+  // ── Refs ──
   const peerRef = useRef<Peer | null>(null)
   const hostConnRef = useRef<AnyDataConnection | null>(null)
   const clientConnsRef = useRef<Map<string, AnyDataConnection>>(new Map())
@@ -67,18 +73,15 @@ export default function ChainLink() {
   })
 
   const clearTimer = () => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current)
-      timerRef.current = null
-    }
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null }
   }
 
+  // ── Host broadcast ──
   const hostBroadcast = (msg: ToClientMsg) => {
-    clientConnsRef.current.forEach((conn) => {
-      try { conn.send(msg) } catch { /* ignore */ }
-    })
+    clientConnsRef.current.forEach((conn) => { try { conn.send(msg) } catch { /* ignore */ } })
   }
 
+  // ── Host game logic ──
   const hostHandleTimeout = (peerId: string) => {
     if (hostGameRef.current.playerOrder[hostGameRef.current.currentIdx] !== peerId) return
     const newLives = { ...lives }
@@ -99,12 +102,11 @@ export default function ChainLink() {
     clearTimer()
     hostGameRef.current.usedCardIds.add(cardId)
     hostGameRef.current.lastCard = { id: cardId, name: cardName }
-    const playerName = players.find((p) => p.peerId === peerId)?.name ?? peerId
-    const newChain = [...chain, { cardId, cardName, playerPeerId: peerId, playerName }]
+    const pn = players.find((p) => p.peerId === peerId)?.name ?? peerId
+    const newChain = [...chain, { cardId, cardName, playerPeerId: peerId, playerName: pn }]
     setChain(newChain)
     hostBroadcast({ type: 'chain-correct', playerPeerId: peerId, cardId, cardName, nextPlayerPeerId: '', deadline: 0, chainLength: newChain.length })
-    const shared = getSharedProperties(lastCard, card)
-    setLastSharedProps(shared)
+    setLastSharedProps(getSharedProperties(lastCard, card))
     setFeedback({ correct: true, cardName })
     setTimeout(() => { setFeedback(null); hostAdvancePlayer() }, 1500)
   }
@@ -116,17 +118,18 @@ export default function ChainLink() {
       const w = alive[0]
       const winnerName = players.find((p) => p.peerId === w)?.name ?? w
       setWinner(winnerName)
-      setPhase('gameover')
+      setLobbyPhase('game')
       hostBroadcast({ type: 'game-over', winner: winnerName, chain: chain.map((c) => ({ cardName: c.cardName, playerName: c.playerName })), lives })
       if (w === myPeerId) { setFinalScore(chain.length * 10 + 50); setShowScoreEntry(true) }
+      clearTimer()
       return
     }
     let next = (hostGameRef.current.currentIdx + 1) % order.length
-    let nextPeerId = order[next]
+    let nid = order[next]
     let tries = 0
-    while ((lives[nextPeerId] ?? 0) <= 0 && tries < order.length) { next = (next + 1) % order.length; nextPeerId = order[next]; tries++ }
+    while ((lives[nid] ?? 0) <= 0 && tries < order.length) { next = (next + 1) % order.length; nid = order[next]; tries++ }
     hostGameRef.current.currentIdx = next
-    hostStartTurn(nextPeerId)
+    hostStartTurn(nid)
   }
 
   const hostStartTurn = (peerId: string) => {
@@ -141,20 +144,21 @@ export default function ChainLink() {
   }
 
   // ── Connection wiring ──
-
   const wireHostConn = (conn: AnyDataConnection) => {
     conn.on('data', (raw: unknown) => {
       const msg = raw as ToHostMsg
       if (!msg?.type) return
       if (msg.type === 'hello') {
         clientConnsRef.current.set(msg.peerId, conn)
-        const newPlayers = [...players, { peerId: msg.peerId, name: msg.name }]
-        setPlayers(newPlayers)
-        hostBroadcast({ type: 'player-list', players: newPlayers })
-        addChat('System', `${msg.name} joined`, false)
+        setPlayers((prev) => {
+          const next = [...prev, { peerId: msg.peerId, name: msg.name }]
+          hostBroadcast({ type: 'player-list', players: next })
+          return next
+        })
+        addChat('System', `${msg.name} joined`)
       } else if (msg.type === 'chat') {
         hostBroadcast({ type: 'chat', name: msg.name, text: msg.text })
-        addChat(msg.name, msg.text, false)
+        addChat(msg.name, msg.text)
       } else if (msg.type === 'submit-card') {
         hostHandleSubmit(conn.peer, msg.cardId, msg.cardName)
       }
@@ -163,11 +167,13 @@ export default function ChainLink() {
       const pid = conn.peer
       clientConnsRef.current.delete(pid)
       const dropped = players.find((p) => p.peerId === pid)
-      const newPlayers = players.filter((p) => p.peerId !== pid)
-      setPlayers(newPlayers)
-      hostBroadcast({ type: 'player-left', peerId: pid, name: dropped?.name ?? pid })
-      hostBroadcast({ type: 'player-list', players: newPlayers })
-      if (dropped) addChat('System', `${dropped.name} left`, false)
+      setPlayers((prev) => {
+        const next = prev.filter((p) => p.peerId !== pid)
+        hostBroadcast({ type: 'player-left', peerId: pid, name: dropped?.name ?? pid })
+        hostBroadcast({ type: 'player-list', players: next })
+        return next
+      })
+      if (dropped) addChat('System', `${dropped.name} left`)
     })
   }
 
@@ -176,13 +182,12 @@ export default function ChainLink() {
       const msg = raw as ToClientMsg
       if (!msg?.type) return
       if (msg.type === 'player-list') setPlayers(msg.players)
-      else if (msg.type === 'player-joined') { setPlayers((p) => [...p, msg.player]); addChat('System', `${msg.player.name} joined`, false) }
-      else if (msg.type === 'player-left') { setPlayers((p) => p.filter((x) => x.peerId !== msg.peerId)); addChat('System', `${msg.name} left`, false) }
-      else if (msg.type === 'chat') addChat(msg.name, msg.text, msg.name === name)
+      else if (msg.type === 'player-joined') { setPlayers((p) => [...p, msg.player]); addChat('System', `${msg.player.name} joined`) }
+      else if (msg.type === 'player-left') { setPlayers((p) => p.filter((x) => x.peerId !== msg.peerId)); addChat('System', `${msg.name} left`) }
+      else if (msg.type === 'chat') addChat(msg.name, msg.text)
       else if (msg.type === 'game-start') {
-        hostGameRef.current.lastCard = msg.firstCard
-        hostGameRef.current.playerOrder = msg.playerOrder
-        setChain([]); setLives(msg.lives); setWinner(null); setPhase('game'); addChat('System', 'Game started!', false)
+        hostGameRef.current.lastCard = msg.firstCard; hostGameRef.current.playerOrder = msg.playerOrder
+        setChain([]); setLives(msg.lives); setWinner(null); setLobbyPhase('game'); addChat('System', 'Game started!')
       } else if (msg.type === 'turn-start') { setCurrentPlayer(msg.playerPeerId); setTurnDeadline(msg.deadline); setFeedback(null); hostGameRef.current.lastCard = msg.lastCard }
       else if (msg.type === 'chain-correct') {
         const nm = players.find((p) => p.peerId === msg.playerPeerId)?.name ?? msg.playerPeerId
@@ -190,58 +195,82 @@ export default function ChainLink() {
         setFeedback({ correct: true, cardName: msg.cardName }); setTimeout(() => setFeedback(null), 1500)
         setTurnDeadline(null); setCurrentPlayer(null)
       } else if (msg.type === 'chain-wrong') { setLives(msg.lives); setFeedback({ correct: false }); setTimeout(() => setFeedback(null), 1500); setTurnDeadline(null); setCurrentPlayer(null) }
-      else if (msg.type === 'game-over') { setWinner(msg.winner); setLives(msg.lives); setPhase('gameover'); clearTimer() }
+      else if (msg.type === 'game-over') { setWinner(msg.winner); setLives(msg.lives); setLobbyPhase('game'); clearTimer() }
     })
-    conn.on('close', () => { setPhase('name-entry'); setPeerError('Disconnected from host') })
+    conn.on('close', () => { setLobbyPhase('setup'); setPeerError('Disconnected from host') })
   }
 
-  // ── Actions ──
+  // ── Chat ──
+  const addChat = (from: string, text: string) => {
+    setChatMessages((prev) => [...prev, { id: ++chatIdSeq, name: from, text, self: from === name }])
+  }
 
-  const handleHost = () => {
-    if (!name.trim()) return
-    localStorage.setItem('cl-player-name', name.trim())
-    setPeerError(null)
-    setIsHost(true)
-    isHostRef.current = true
+  const handleSendChat = useCallback(() => {
+    const text = chatInput.trim()
+    if (!text) return
+    setChatInput('')
+    const payload: ToHostMsg | ToClientMsg = { type: 'chat', name, text }
+    if (isHost) hostBroadcast(payload as ToClientMsg)
+    else if (hostConnRef.current) hostConnRef.current.send(payload)
+    addChat(name, text)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatInput, name, isHost])
+
+  // ── Lobby actions ──
+  const handleHost = useCallback((nm: string) => {
+    setName(nm)
     myPeerIdRef.current = ''
+    isHostRef.current = true; setIsHost(true)
+    setPeerError(null); setPlayers([]); setChatMessages([])
     const isLocalDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const peer: any = isLocalDev ? createLocalPeer() : new Peer({ config: { iceServers: ICE_SERVERS } })
     peerRef.current = peer
-    peer.on('open', (id: string) => { myPeerIdRef.current = id; setMyPeerId(id); setPhase('lobby') })
+    peer.on('open', (id: string) => { myPeerIdRef.current = id; setMyPeerId(id); setLobbyPhase('lobby') })
     peer.on('connection', (conn: AnyDataConnection) => { wireHostConn(conn) })
     peer.on('error', (err: Error) => setPeerError(err.message))
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-  const handleJoin = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleJoin = useCallback(() => {
     const id = joinId.trim()
     if (!id || !peerRef.current) return
     setPeerError(null)
-    isHostRef.current = false
-    setIsHost(false)
+    isHostRef.current = false; setIsHost(false)
     wireClientConn(peerRef.current.connect(id) as unknown as AnyDataConnection)
-    setPhase('lobby')
-  }
+    setLobbyPhase('room')
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [joinId])
 
-  const hostStartGame = () => {
+  const handleCopy = useCallback(() => {
+    if (!myPeerId) return
+    navigator.clipboard.writeText(myPeerId).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) })
+  }, [myPeerId])
+
+  const handleLeaveRoom = useCallback(() => {
+    clearTimer()
+    peerRef.current?.destroy(); peerRef.current = null
+    hostConnRef.current = null; clientConnsRef.current.clear()
+    setMyPeerId(null); setPlayers([]); setChatMessages([])
+  }, [])
+
+  const handleStartGame = useCallback(() => {
     const allPlayers = players
-    if (allPlayers.length < 1) return
     const order = [myPeerIdRef.current, ...allPlayers.map((p) => p.peerId)]
-    hostGameRef.current.playerOrder = order
-    hostGameRef.current.currentIdx = 0
-    hostGameRef.current.usedCardIds.clear()
+    hostGameRef.current = { playerOrder: order, currentIdx: 0, usedCardIds: new Set(), lastCard: null }
     const startCard = pickStartingCard(cards)
     hostGameRef.current.lastCard = { id: startCard.id, name: startCard.name }
     hostGameRef.current.usedCardIds.add(startCard.id)
     const initialLives: Record<string, number> = {}
     order.forEach((p) => { initialLives[p] = MAX_LIVES })
     setChain([{ cardId: startCard.id, cardName: startCard.name, playerPeerId: '', playerName: 'Start' }])
-    setLives(initialLives); setWinner(null); setFeedback(null); setPhase('game')
+    setLives(initialLives); setWinner(null); setFeedback(null); setLobbyPhase('game')
     hostBroadcast({ type: 'game-start', firstCard: { id: startCard.id, name: startCard.name }, playerOrder: order, lives: initialLives })
     setTimeout(() => hostStartTurn(order[0]), 1000)
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [players, cards])
 
+  // ── Search ──
   const submitCard = (cardName: string) => {
     const card = cards.find((c) => c.name === cardName)
     if (!card) return
@@ -250,33 +279,16 @@ export default function ChainLink() {
     else if (hostConnRef.current) hostConnRef.current.send({ type: 'submit-card', cardId: card.id, cardName: card.name })
   }
 
-  const sendChat = (e: React.FormEvent) => {
-    e.preventDefault()
-    const text = chatInput.trim()
-    if (!text) return
-    setChatInput('')
-    const msg = { type: 'chat' as const, name, text }
-    if (isHost) hostBroadcast(msg)
-    else if (hostConnRef.current) hostConnRef.current.send(msg)
-    addChat(name, text, true)
-  }
-
-  const addChat = (from: string, text: string, self: boolean) => {
-    setChatMessages((prev) => [...prev, { id: ++chatIdSeq, name: from, text, self }])
-  }
-
-  const handleScoreSubmit = (entryName: string) => {
-    addScore('chainLink', entryName, finalScore)
-    setShowScoreEntry(false)
-  }
-
   const handleSearch = (value: string) => {
     setSearchQuery(value)
     if (value.length >= 2) { setSearchResults(cardNames.filter((n) => n.toLowerCase().includes(value.toLowerCase())).slice(0, 8)); setSearchOpen(true) }
     else { setSearchResults([]); setSearchOpen(false) }
   }
 
-  // ── Countdown ──
+  const handleScoreSubmit = (entryName: string) => {
+    addScore('chainLink', entryName, finalScore)
+    setShowScoreEntry(false)
+  }
 
   useEffect(() => {
     if (!turnDeadline) return
@@ -288,71 +300,68 @@ export default function ChainLink() {
 
   useEffect(() => { return () => { clearTimer(); peerRef.current?.destroy() } }, [])
 
-  const isMyTurn = currentPlayer === myPeerId && phase === 'game'
+  const isMyTurn = currentPlayer === myPeerId && lobbyPhase === 'game'
   const canStart = isHost && players.length >= 1 && players.length < MAX_PLAYERS
 
-  // ── Name entry ──
-  if (phase === 'name-entry') {
+  // ── Shared lobby UI ──
+  if (lobbyPhase !== 'game') {
     return (
-      <div className="pvp-lobby">
-        <h2 className="pvp-lobby__title">Chain Link</h2>
-        {peerError && <p className="pvp-lobby__error">{peerError}</p>}
-        <form className="pvp-lobby__form" onSubmit={(e) => { e.preventDefault(); handleHost() }}>
-          <label className="pvp-lobby__label" htmlFor="cl-name">Your name</label>
-          <input id="cl-name" className="pvp-lobby__input" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter your name…" maxLength={16} autoFocus />
-          <button className="hol-btn" type="submit" disabled={!name.trim()}>Host Game</button>
-        </form>
-      </div>
+      <MultiplayerLobby
+        title="Chain Link"
+        storageKey="cl-player-name"
+        description="Multiplayer chain-building game. Players take turns naming a Yu-Gi-Oh! card that shares a property — attribute, race, archetype, or type — with the previous card. Break the chain and lose a life. Last player standing wins!"
+        lobbyPhase={lobbyPhase}
+        onPhaseChange={setLobbyPhase}
+        name={name}
+        onNameChange={setName}
+        myPeerId={myPeerId}
+        joinId={joinId}
+        onJoinIdChange={setJoinId}
+        copied={copied}
+        peerError={peerError}
+        isHost={isHost}
+        players={players}
+        canStart={canStart}
+        maxPlayers={MAX_PLAYERS}
+        onHost={handleHost}
+        onJoin={handleJoin}
+        onCopy={handleCopy}
+        onStartGame={handleStartGame}
+        onLeaveRoom={handleLeaveRoom}
+        chatMessages={chatMessages}
+        chatInput={chatInput}
+        onChatInputChange={setChatInput}
+        onSendChat={handleSendChat}
+      />
     )
   }
 
-  // ── Lobby ──
-  if (phase === 'lobby') {
+  // ── Game rendering ──
+  if (winner) {
     return (
-      <div className="pvp-lobby">
-        <h2 className="pvp-lobby__title">Chain Link</h2>
-        <p className="pvp-lobby__you">You: <strong>{name}</strong></p>
-        {!myPeerId && <p className="pvp-lobby__hint">Connecting to network…</p>}
-        {myPeerId && (
-          <>
-            {isHost && (
-              <section className="pvp-lobby__section">
-                <p className="pvp-lobby__label">Your game code — share with friends:</p>
-                <div className="pvp-lobby__id-row">
-                  <code className="pvp-lobby__id">{myPeerId}</code>
-                  <button className="pvp-lobby__copy-btn" onClick={() => { navigator.clipboard.writeText(myPeerId); setCopied(true); setTimeout(() => setCopied(false), 2000) }}>{copied ? 'Copied!' : 'Copy'}</button>
-                </div>
-              </section>
-            )}
-            <div className="pvp-lobby__divider">or</div>
-            <section className="pvp-lobby__section">
-              <form onSubmit={handleJoin}>
-                <p className="pvp-lobby__label">Join a friend's game:</p>
-                <div className="pvp-lobby__id-row">
-                  <input className="pvp-lobby__input pvp-lobby__input--wide" type="text" value={joinId} onChange={(e) => setJoinId(e.target.value)} placeholder="Paste their game code…" />
-                  <button className="hol-btn" type="submit" disabled={!joinId.trim()}>Join</button>
-                </div>
-              </form>
-            </section>
-          </>
-        )}
-        <ul className="pvp-lobby__player-list">
-          {players.map((p) => (
-            <li key={p.peerId} className="pvp-lobby__player-row">
-              <span className="pvp-lobby__dot pvp-lobby__dot--online" />
-              <span className="pvp-lobby__player-name">{p.name}</span>
-              <span className="pvp-lobby__tag pvp-lobby__tag--host">HOST</span>
-            </li>
+      <div className="cl-game-col" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', padding: '2rem' }}>
+        <h2 style={{ fontSize: '2rem', margin: 0 }}>Game Over</h2>
+        <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--accent)', margin: 0 }}>{winner} wins!</p>
+        <div className="cl-chain-list" style={{ maxHeight: '300px' }}>
+          {chain.map((entry, i) => (
+            <div key={i} className="cl-chain-entry">
+              <img className="cl-chain-entry__img" src={`https://images.ygoprodeck.com/images/cards_cropped/${entry.cardId}.jpg`} alt={entry.cardName} />
+              <div className="cl-chain-entry__info">
+                <span className="cl-chain-entry__name">{entry.cardName}</span>
+                <span className="cl-chain-entry__player">{entry.playerName || 'Start'}</span>
+              </div>
+            </div>
           ))}
-          {players.length === 0 && <li className="pvp-lobby__player-row pvp-lobby__player-row--empty">Waiting for players…</li>}
-        </ul>
-        {canStart && <button className="hol-btn" onClick={hostStartGame} style={{ width: '100%' }}>Start Game ({players.length + 1} players)</button>}
-        {peerError && <p className="pvp-lobby__error">{peerError}</p>}
+        </div>
+        {showScoreEntry ? (
+          <ScoreEntry score={finalScore} onSubmit={handleScoreSubmit} onSkip={() => setShowScoreEntry(false)} />
+        ) : (
+          <button className="hol-btn" onClick={() => { handleLeaveRoom(); setLobbyPhase('setup'); setIsHost(false); setWinner(null) }}>Leave</button>
+        )}
       </div>
     )
   }
 
-  // ── Game / Gameover ──
   return (
     <div className="pvp-room">
       <div className="cl-game-col">
@@ -411,16 +420,7 @@ export default function ChainLink() {
           </>
         )}
 
-        {phase === 'game' && !isMyTurn && (
-          <div className="cl-waiting">{currentPlayer ? `Waiting for ${players.find((p) => p.peerId === currentPlayer)?.name ?? '...'}…` : 'Waiting for next turn…'}</div>
-        )}
-
-        {phase === 'gameover' && winner && (
-          <div className="cl-gameover">
-            <span className="cl-gameover__winner">{winner} wins!</span>
-            {showScoreEntry ? <ScoreEntry score={finalScore} onSubmit={handleScoreSubmit} onSkip={() => setShowScoreEntry(false)} /> : <button className="hol-btn" onClick={() => { setPhase('name-entry'); setIsHost(false); setWinner(null) }}>Leave</button>}
-          </div>
-        )}
+        {!isMyTurn && <div className="cl-waiting">{currentPlayer ? `Waiting for ${players.find((p) => p.peerId === currentPlayer)?.name ?? '...'}…` : 'Waiting for next turn…'}</div>}
       </div>
 
       <div className="pvp-chat">
@@ -432,7 +432,7 @@ export default function ChainLink() {
             </div>
           ))}
         </div>
-        <form className="pvp-chat__input-row" onSubmit={sendChat}>
+        <form className="pvp-chat__input-row" onSubmit={(e) => { e.preventDefault(); handleSendChat() }}>
           <input className="pvp-chat__input" value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Chat…" />
           <button className="hol-btn" type="submit" style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem' }}>Send</button>
         </form>
