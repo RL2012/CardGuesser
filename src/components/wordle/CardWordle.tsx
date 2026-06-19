@@ -21,6 +21,7 @@ function HintBadge({ hint }: { hint: PropertyHint }) {
       className="wl-hint-badge"
       style={{ background: style.bg, color: style.text }}
     >
+      <span className="wl-hint-badge__label">{hint.label}</span>
       {hint.value}
       {arrow}
     </span>

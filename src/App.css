@@ -2933,6 +2933,10 @@
   line-height: 1.2;
 }
 
+.wl-hint-badge__label {
+  display: none;
+}
+
 .wl-hint-badge--empty {
   background: var(--surface);
   border: 1px dashed var(--border);
@@ -3022,15 +3026,71 @@
 }
 
 @media (max-width: 600px) {
-  .wl-col-header--card {
-    flex: 0 0 80px;
+  .wl-game {
+    padding: 0.75rem 0.5rem;
+    gap: 0.625rem;
+  }
+
+  .wl-column-headers {
+    display: none;
+  }
+
+  .wl-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.375rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.625rem;
+    background: var(--surface);
+  }
+
+  .wl-row--empty {
+    padding: 0.75rem 0.625rem;
   }
 
   .wl-row__card {
-    flex: 0 0 80px;
+    flex: none;
+    justify-content: center;
+    gap: 0.5rem;
   }
 
   .wl-row__img {
-    display: none;
+    width: 48px;
+    height: 48px;
+    display: block;
+  }
+
+  .wl-row__name {
+    font-size: 0.85rem;
+  }
+
+  .wl-row__hints {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.3rem;
+  }
+
+  .wl-hint-badge {
+    flex: none;
+    font-size: 0.72rem;
+    padding: 0.35rem 0.5rem;
+    display: flex;
+    gap: 0.25rem;
+    justify-content: center;
+    align-items: baseline;
+  }
+
+  .wl-hint-badge__label {
+    display: inline;
+    font-size: 0.6rem;
+    font-weight: 400;
+    opacity: 0.75;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .wl-hint-badge--empty {
+    min-height: 2.1rem;
   }
 }
