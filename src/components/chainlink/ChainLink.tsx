@@ -99,18 +99,28 @@ export default function ChainLink() {
   useEffect(() => { playersRef.current = players }, [players])
 
   const updateChain = (val: ChainEntry[] | ((prev: ChainEntry[]) => ChainEntry[])) => {
-    setChain((prev) => {
-      const next = typeof val === 'function' ? val(prev) : val
-      chainRef.current = next
-      return next
-    })
+    if (typeof val === 'function') {
+      setChain((prev) => {
+        const next = val(prev)
+        chainRef.current = next
+        return next
+      })
+    } else {
+      chainRef.current = val
+      setChain(val)
+    }
   }
   const updateLives = (val: Record<string, number> | ((prev: Record<string, number>) => Record<string, number>)) => {
-    setLives((prev) => {
-      const next = typeof val === 'function' ? val(prev) : val
-      livesRef.current = next
-      return next
-    })
+    if (typeof val === 'function') {
+      setLives((prev) => {
+        const next = val(prev)
+        livesRef.current = next
+        return next
+      })
+    } else {
+      livesRef.current = val
+      setLives(val)
+    }
   }
 
   const clearTimer = () => {
@@ -712,7 +722,14 @@ export default function ChainLink() {
               <div className="card-search" style={{ maxWidth: '440px', margin: '0 auto' }}>
                 <input ref={searchRef} className="card-search-input" placeholder="Search a card…" value={searchQuery} onChange={(e) => handleSearch(e.target.value)} onFocus={() => { if (searchResults.length > 0) { setSearchRect(searchRef.current?.getBoundingClientRect() ?? null); setSearchOpen(true) } }} onBlur={() => setTimeout(() => setSearchOpen(false), 150)} onKeyDown={(e) => { if (e.key === 'Enter' && searchResults.length > 0) submitCard(searchResults[0]) }} autoComplete="off" />
                 {searchOpen && searchResults.length > 0 && searchRect && createPortal(
-                  <ul className="search-dropdown" style={{ position: 'fixed', top: searchRect.bottom + 2, left: searchRect.left, width: searchRect.width }}>
+                  <ul className="search-dropdown" style={{
+                    position: 'fixed',
+                    left: searchRect.left,
+                    width: searchRect.width,
+                    ...(searchRect.bottom + searchResults.length * 42 > window.innerHeight
+                      ? { bottom: window.innerHeight - searchRect.top + 2 }
+                      : { top: searchRect.bottom + 2 }),
+                  }}>
                     {searchResults.map((n) => <li key={n} className="search-dropdown-item" onMouseDown={() => submitCard(n)}>{n}</li>)}
                   </ul>,
                   document.body
