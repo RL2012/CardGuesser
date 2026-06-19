@@ -2,6 +2,17 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🚨 VERY IMPORTANT — Deployment
+
+**Every push to `main` triggers an automatic deploy to production via GitHub Actions.** The workflow (`.github/workflows/deploy.yml`) runs `npm ci && npm run build` and deploys `dist/` to GitHub Pages at `https://rl2012.github.io/CardGuesser/`.
+
+**After every code change that you commit, you MUST also push to `main`** so the deployment fires. Never commit without pushing — unstaged or unpushed changes won't reach users.
+
+**Before committing, always verify:**
+- `npm run build` passes (runs `tsc -b && vite build`)
+- `npm run lint` passes (runs ESLint — also enforced by the pre-commit hook)
+- `npm ci` succeeds (validates the lock file is CI-compatible)
+
 ## Before starting work
 
 Always run `git fetch origin && git status` before making any changes. Check whether the local branch is behind the remote — if it is, **pull first** to avoid conflicts with parallel commits from other machines.
@@ -56,13 +67,16 @@ Never commit a lock file produced by `npm install --legacy-peer-deps` — it cau
 - `game` — Card Guesser state: current card, crop position (`cropX`/`cropY` as 0–1 fractions), zoom level (5 = most zoomed, 1 = full card), timers, scores, round history
 - `higherOrLower` — Higher or Lower state; includes `mode: 'atk' | 'price' | 'date'` — ATK Battle compares monster ATK, Price Check compares TCGPlayer prices (cards with price = 0 are excluded), Newer or Older compares TCG release dates (`tcgDate`)
 
-**Game modes** are tab-switched in `App.tsx`; each is a self-contained component tree:
+**Game modes** are tab-switched in `App.tsx`; each is a self-contained component tree. The nav bar is organized into sections: Home, Leaderboards, then **Solo** games (Card Guesser, Higher or Lower, Connections, Card Wordle, Trivia Blitz) and **Multiplayer** games (Card Categories, Codenames, Chameleon). On mobile (≤600px) the nav collapses into a slide-in hamburger drawer.
 
 - `src/components/card-guesser/` — four components: `CardGuesser` (orchestrator with timers), `CardDisplay` (CSS crop/zoom), `CardSearch` (Fuse.js autocomplete), `PreviousRounds`
 - `src/components/higher-or-lower/HigherOrLower.tsx` — self-contained with its own Redux slice
+- `src/components/connections/Connections.tsx` — Solo Connections puzzle game (see below).
+- `src/components/wordle/CardWordle.tsx` — Solo Card Wordle: guess a hidden monster card in 6 tries using colour-coded property hints (Attribute, Type, Race, Archetype, Level, ATK, DEF, Banlist). See `wordleUtils.ts`.
+- `src/components/trivia/TriviaBlitz.tsx` — Solo Trivia Blitz: rapid-fire multiple-choice quiz (attribute, archetype, race, frame type, banlist, highest ATK). 15s timer, 3 lives, streak/time bonuses. See `triviaUtils.ts`.
+- `src/components/Leaderboards.tsx` — Standalone leaderboards page showing top 5 for all 9 game modes, read from `localStorage` via `src/services/leaderboard.ts`.
 - `src/components/card-categories/CardCategories.tsx` — PvP and solo mode for Card Categories game. All PvP networking logic lives here.
 - `src/components/codenames/Codenames.tsx` — Multiplayer-only Codenames game (see below).
-- `src/components/connections/Connections.tsx` — Solo Connections game (see below).
 - `src/components/chameleon/Chameleon.tsx` — Multiplayer-only Chameleon social deduction game (see below).
 
 **Shared multiplayer layer** (`src/multiplayer/`): Extracted from Card Categories so both multiplayer games share it.
@@ -99,8 +113,6 @@ Never commit a lock file produced by `npm install --legacy-peer-deps` — it cau
 
 **Theme:** `data-theme` attribute on `<html>`, toggled in `App.tsx`, persisted to `localStorage`. CSS vars are defined per theme in `App.css`.
 
-**Deployment:** GitHub Actions (`deploy.yml`) builds on push to `main` and deploys `dist/` to GitHub Pages. Vite base is `/CardGuesser/`.
-
 **Typed hooks:** `src/hooks/hooks.ts` exports `useAppDispatch` and `useAppSelector` — always use these instead of the raw Redux hooks.
 
 **Shared utilities and types:**
@@ -117,15 +129,7 @@ Never auto-commit changes. Only run `git commit` when the user explicitly asks. 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 ```
 
-## Git workflow after code changes
-
-After every code change, stage, commit, and push automatically:
-
-```powershell
-git add -A
-git commit -m "describe changes made"
-git push
-```
+**Always push after committing** to trigger the automatic deployment workflow.
 
 ## README.md synchronization
 
