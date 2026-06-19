@@ -3534,161 +3534,12 @@
 
 /* ── Chain Link ── */
 
-.cl-lobby {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.25rem;
-  padding: 2rem;
-  max-width: 440px;
-  margin: 0 auto;
+/* Game column (left side of pvp-room) */
+.cl-game-col {
   flex: 1;
-  overflow-y: auto;
-}
-
-.cl-lobby__title {
-  font-size: 1.75rem;
-  font-weight: 700;
-  margin: 0;
-}
-
-.cl-lobby__you {
-  font-size: 1rem;
-  color: var(--text-muted);
-  margin: 0;
-}
-
-.cl-lobby__form {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  width: 100%;
-}
-
-.cl-lobby__section {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  width: 100%;
-}
-
-.cl-lobby__label {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  text-align: left;
-  margin: 0;
-}
-
-.cl-lobby__id-row {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.cl-lobby__id {
-  flex: 1;
-  font-size: 0.8rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 0.5rem 0.75rem;
-  word-break: break-all;
-  user-select: all;
-  color: var(--text);
-}
-
-.cl-lobby__copy-btn {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--text-muted);
-  padding: 0.35rem 0.75rem;
-  font-size: 0.8rem;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.cl-lobby__copy-btn:hover {
-  background: var(--surface-hover);
-  color: var(--text);
-}
-
-.cl-lobby__divider {
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 0.85rem;
-}
-
-.cl-lobby__error {
-  color: var(--error);
-  font-size: 0.85rem;
-  margin: 0;
-  text-align: center;
-}
-
-.cl-lobby__hint {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  margin: 0;
-}
-
-.cl-player-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  width: 100%;
-}
-
-.cl-player-row {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  padding: 0.5rem 0.75rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font-size: 0.9rem;
-  color: var(--text);
-}
-
-.cl-player-row__name {
-  font-weight: 600;
-}
-
-.cl-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--border);
-  flex-shrink: 0;
-}
-
-.cl-dot--online {
-  background: var(--success);
-}
-
-.cl-tag {
-  font-size: 0.65rem;
-  font-weight: 600;
-  padding: 0.1rem 0.35rem;
-  border-radius: 4px;
-  margin-left: auto;
-}
-
-.cl-tag--host {
-  color: var(--accent);
-  border: 1px solid var(--accent);
-}
-
-/* ── Game layout ── */
-.cl-game {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
+  min-width: 0;
   overflow-y: auto;
 }
 
@@ -3708,7 +3559,7 @@
   font-weight: 700;
 }
 
-.cl-game-header__lives {
+.cl-lives-row {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
@@ -3796,20 +3647,14 @@
   color: #ef4444;
 }
 
-.cl-chain-area {
-  flex: 1;
-  overflow-y: auto;
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
 .cl-chain-list {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
   align-items: center;
+  padding: 1rem;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .cl-chain-entry {
@@ -3850,16 +3695,10 @@
   color: var(--text-muted);
 }
 
-.cl-chain-arrow {
-  font-size: 1.25rem;
-  color: var(--accent);
-  flex-shrink: 0;
-}
-
 .cl-chain-prompt {
   text-align: center;
-  max-width: 480px;
-  margin: 0 auto;
+  padding: 0.5rem 1rem;
+  flex-shrink: 0;
 }
 
 .cl-chain-prompt__label {
@@ -3876,7 +3715,7 @@
 }
 
 .cl-search-area {
-  padding: 0.75rem 1rem;
+  padding: 0.5rem 1rem;
   flex-shrink: 0;
 }
 
@@ -3892,7 +3731,7 @@
   font-size: 0.95rem;
 }
 
-.cl-gameover-banner {
+.cl-gameover {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -3902,81 +3741,13 @@
   flex-shrink: 0;
 }
 
-.cl-gameover-banner__text {
+.cl-gameover__winner {
   font-size: 1.5rem;
   font-weight: 700;
   color: var(--accent);
 }
 
-.cl-sidebar-chat {
-  border-top: 1px solid var(--border);
-  flex-shrink: 0;
-  max-height: 200px;
-  display: flex;
-  flex-direction: column;
-}
-
-.cl-chat-messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0.5rem 0.75rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  min-height: 60px;
-}
-
-.cl-chat-msg {
-  font-size: 0.8rem;
-}
-
-.cl-chat-msg__name {
-  font-weight: 700;
-  color: var(--accent);
-  margin-right: 0.35rem;
-}
-
-.cl-chat-msg__text {
-  color: var(--text);
-}
-
-.cl-chat-msg--system .cl-chat-msg__text {
-  color: var(--text-muted);
-  font-style: italic;
-}
-
-.cl-chat-msg--self .cl-chat-msg__name {
-  color: var(--success);
-}
-
-.cl-chat-input-row {
-  display: flex;
-  gap: 0.35rem;
-  padding: 0.5rem 0.75rem;
-  border-top: 1px solid var(--border);
-}
-
-.cl-chat-input {
-  flex: 1;
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--text);
-  padding: 0.35rem 0.6rem;
-  font-size: 0.85rem;
-  outline: none;
-  font-family: inherit;
-}
-
-.cl-chat-input:focus {
-  border-color: var(--accent);
-}
-
 @media (max-width: 600px) {
-  .cl-lobby {
-    padding: 1.25rem 1rem;
-  }
-
   .cl-chain-entry__img {
     width: 36px;
     height: 36px;
