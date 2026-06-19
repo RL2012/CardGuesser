@@ -3531,3 +3531,458 @@
     padding: 0.75rem 1rem;
   }
 }
+
+/* ── Chain Link ── */
+
+.cl-lobby {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 2rem;
+  max-width: 440px;
+  margin: 0 auto;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.cl-lobby__title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.cl-lobby__you {
+  font-size: 1rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.cl-lobby__form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+.cl-lobby__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.cl-lobby__label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-align: left;
+  margin: 0;
+}
+
+.cl-lobby__id-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.cl-lobby__id {
+  flex: 1;
+  font-size: 0.8rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  word-break: break-all;
+  user-select: all;
+  color: var(--text);
+}
+
+.cl-lobby__copy-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.cl-lobby__copy-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.cl-lobby__divider {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.cl-lobby__error {
+  color: var(--error);
+  font-size: 0.85rem;
+  margin: 0;
+  text-align: center;
+}
+
+.cl-lobby__hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.cl-player-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.cl-player-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.cl-player-row__name {
+  font-weight: 600;
+}
+
+.cl-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.cl-dot--online {
+  background: var(--success);
+}
+
+.cl-tag {
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  margin-left: auto;
+}
+
+.cl-tag--host {
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+
+/* ── Game layout ── */
+.cl-game {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.cl-game-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.cl-game-header__title {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.cl-game-header__lives {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.cl-life-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.625rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  transition: border-color 0.2s, opacity 0.2s;
+}
+
+.cl-life-chip--active {
+  border-color: var(--accent);
+}
+
+.cl-life-chip--dead {
+  opacity: 0.4;
+}
+
+.cl-life-chip__name {
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+.cl-life-chip__hearts {
+  display: flex;
+  gap: 0.1rem;
+}
+
+.cl-heart {
+  color: #ef4444;
+  font-size: 0.85rem;
+}
+
+.cl-heart--empty {
+  color: var(--border);
+  opacity: 0.5;
+}
+
+.cl-turn-bar {
+  height: 4px;
+  background: var(--border);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.cl-turn-bar__fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.5s linear;
+}
+
+.cl-turn-bar__fill--urgent {
+  background: var(--error);
+}
+
+.cl-feedback {
+  text-align: center;
+  padding: 0.625rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  flex-shrink: 0;
+  animation: cl-feedback-in 0.2s ease;
+}
+
+@keyframes cl-feedback-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.cl-feedback--correct {
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+}
+
+.cl-feedback--wrong {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+.cl-chain-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cl-chain-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.cl-chain-entry {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  width: 100%;
+  max-width: 480px;
+}
+
+.cl-chain-entry__img {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.cl-chain-entry__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.cl-chain-entry__name {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.cl-chain-entry__player {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.cl-chain-arrow {
+  font-size: 1.25rem;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.cl-chain-prompt {
+  text-align: center;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.cl-chain-prompt__label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.cl-chain-prompt__last {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.cl-search-area {
+  padding: 0.75rem 1rem;
+  flex-shrink: 0;
+}
+
+.cl-search-area .card-search {
+  max-width: 440px;
+  margin: 0 auto;
+}
+
+.cl-waiting {
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.cl-gameover-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.cl-gameover-banner__text {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.cl-sidebar-chat {
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  max-height: 200px;
+  display: flex;
+  flex-direction: column;
+}
+
+.cl-chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-height: 60px;
+}
+
+.cl-chat-msg {
+  font-size: 0.8rem;
+}
+
+.cl-chat-msg__name {
+  font-weight: 700;
+  color: var(--accent);
+  margin-right: 0.35rem;
+}
+
+.cl-chat-msg__text {
+  color: var(--text);
+}
+
+.cl-chat-msg--system .cl-chat-msg__text {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.cl-chat-msg--self .cl-chat-msg__name {
+  color: var(--success);
+}
+
+.cl-chat-input-row {
+  display: flex;
+  gap: 0.35rem;
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.cl-chat-input {
+  flex: 1;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 0.35rem 0.6rem;
+  font-size: 0.85rem;
+  outline: none;
+  font-family: inherit;
+}
+
+.cl-chat-input:focus {
+  border-color: var(--accent);
+}
+
+@media (max-width: 600px) {
+  .cl-lobby {
+    padding: 1.25rem 1rem;
+  }
+
+  .cl-chain-entry__img {
+    width: 36px;
+    height: 36px;
+  }
+
+  .cl-chain-entry__name {
+    font-size: 0.75rem;
+  }
+}

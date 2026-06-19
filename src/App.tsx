@@ -7,6 +7,7 @@ import CardCategories from './components/card-categories/CardCategories'
 import Codenames from './components/codenames/Codenames'
 import Connections from './components/connections/Connections'
 import Chameleon from './components/chameleon/Chameleon'
+import ChainLink from './components/chainlink/ChainLink'
 import CardWordle from './components/wordle/CardWordle'
 import TriviaBlitz from './components/trivia/TriviaBlitz'
 import Leaderboards from './components/Leaderboards'
@@ -22,6 +23,7 @@ type GameMode =
   | 'codenames'
   | 'connections'
   | 'chameleon'
+  | 'chain-link'
   | 'wordle'
   | 'trivia'
 
@@ -121,6 +123,12 @@ export default function App() {
           >
             Chameleon
           </button>
+          <button
+            className={`game-tab${activeGame === 'chain-link' ? ' game-tab--active' : ''}`}
+            onClick={() => { setActiveGame('chain-link'); setMenuOpen(false) }}
+          >
+            Chain Link
+          </button>
         </nav>
         {menuOpen && <div className="menu-overlay" onClick={() => setMenuOpen(false)} />}
       </header>
@@ -144,6 +152,7 @@ export default function App() {
           {activeGame === 'codenames' && <Codenames />}
           {activeGame === 'connections' && <Connections />}
           {activeGame === 'chameleon' && <Chameleon />}
+          {activeGame === 'chain-link' && <ChainLink />}
           {activeGame === 'wordle' && <CardWordle />}
           {activeGame === 'trivia' && <TriviaBlitz />}
         </>

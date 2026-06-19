@@ -44,6 +44,7 @@ export default function Leaderboards() {
     { title: 'Chameleon', entries: getLeaderboard('chameleon') },
     { title: 'Card Wordle', entries: getLeaderboard('wordle') },
     { title: 'Trivia Blitz', entries: getLeaderboard('trivia') },
+    { title: 'Chain Link', entries: getLeaderboard('chainLink') },
   ]
 
   return (
