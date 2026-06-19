@@ -105,6 +105,18 @@
   flex-shrink: 0;
 }
 
+/* ── Version badge ── */
+.version-badge {
+  position: fixed;
+  bottom: 0.5rem;
+  left: 0.75rem;
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  opacity: 0.5;
+  pointer-events: none;
+  z-index: 0;
+}
+
 /* ── Hamburger ── */
 .hamburger {
   display: none;

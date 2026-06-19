@@ -94,7 +94,6 @@ export default function ChainLink() {
   })
 
   useEffect(() => { cardsRef.current = cards }, [cards])
-  useEffect(() => { playersRef.current = players }, [players])
 
   const clearTimer = () => {
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null }
@@ -123,17 +122,18 @@ export default function ChainLink() {
   function upsertPlayer(player: PlayerInfo) {
     setPlayers((prev) => {
       const idx = prev.findIndex((p) => p.peerId === player.peerId)
-      if (idx >= 0) {
-        const next = [...prev]
-        next[idx] = player
-        return next
-      }
-      return [...prev, player]
+      const next = idx >= 0 ? Object.assign([...prev], { [idx]: player }) : [...prev, player]
+      playersRef.current = next
+      return next
     })
   }
 
   function removePlayer(peerId: string) {
-    setPlayers((prev) => prev.filter((p) => p.peerId !== peerId))
+    setPlayers((prev) => {
+      const next = prev.filter((p) => p.peerId !== peerId)
+      playersRef.current = next
+      return next
+    })
   }
 
   // ── Host game logic ─────────────────────────────────────────────────────

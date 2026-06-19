@@ -157,6 +157,14 @@ export default function App() {
           {activeGame === 'trivia' && <TriviaBlitz />}
         </>
       )}
+
+      <span className="version-badge">
+        v{import.meta.env.VITE_VERSION || 'dev'}
+        {' · '}
+        {import.meta.env.VITE_BUILD_TIME
+          ? new Date(import.meta.env.VITE_BUILD_TIME).toLocaleDateString()
+          : 'local'}
+      </span>
     </div>
   )
 }
