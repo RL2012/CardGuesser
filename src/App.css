@@ -45,8 +45,16 @@
 .game-tabs {
   display: flex;
   justify-content: center;
-  gap: 0.5rem;
+  gap: 0.25rem;
   margin-top: 0.5rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 0 0.125rem;
+}
+
+.game-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .game-tab {
@@ -54,9 +62,11 @@
   border: 1px solid var(--border);
   color: var(--text-muted);
   border-radius: 6px;
-  padding: 0.3rem 0.875rem;
-  font-size: 0.875rem;
+  padding: 0.28rem 0.6rem;
+  font-size: 0.78rem;
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition:
     background 0.15s,
     color 0.15s,
@@ -80,18 +90,20 @@
   width: 1px;
   align-self: stretch;
   background: var(--border);
-  margin: 0 0.25rem;
+  margin: 0 0.15rem;
+  flex-shrink: 0;
 }
 
 .game-tabs__label {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   color: var(--text-muted);
   display: flex;
   align-items: center;
-  padding: 0 0.25rem;
+  padding: 0 0.15rem;
+  flex-shrink: 0;
 }
 
 /* ── Hamburger ── */
