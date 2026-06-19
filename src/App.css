@@ -967,7 +967,7 @@
 
 /* Chat sidebar inside pvp-room (fixed width, matching other games) */
 .pvp-room .pvp-chat {
-  flex: 0 0 260px;
+  flex: 0 0 280px;
   border-left: 1px solid var(--border);
   border-radius: 0;
 }
@@ -1827,12 +1827,15 @@
     height: auto;
   }
 
-  .pvp-room__sidebar {
+  .pvp-room .pvp-chat {
     flex: none;
+    min-height: 200px;
+    border-left: none;
+    border-top: 1px solid var(--border);
   }
 
-  .pvp-chat {
-    min-height: 300px;
+  .pvp-room__sidebar {
+    flex: none;
   }
 }
 

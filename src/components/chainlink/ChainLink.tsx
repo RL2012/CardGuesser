@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect, useMemo, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import Peer from 'peerjs'
 import { useAppSelector } from '../../hooks/hooks'
 import ScoreEntry from '../ScoreEntry'
@@ -57,6 +58,8 @@ export default function ChainLink() {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<string[]>([])
   const [searchOpen, setSearchOpen] = useState(false)
+  const [searchRect, setSearchRect] = useState<DOMRect | null>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
 
   // ── Refs ──
   const peerRef = useRef<Peer | null>(null)
@@ -413,12 +416,23 @@ export default function ChainLink() {
               <span className="cl-chain-prompt__last">{chain[chain.length - 1]?.cardName}</span>
             </div>
             <div className="cl-search-area">
-              <div className="card-search" style={{ position: 'relative' }}>
-                <input className="card-search-input" placeholder="Search a card…" value={searchQuery} onChange={(e) => handleSearch(e.target.value)} onFocus={() => { if (searchResults.length > 0) setSearchOpen(true) }} onBlur={() => setTimeout(() => setSearchOpen(false), 150)} onKeyDown={(e) => { if (e.key === 'Enter' && searchResults.length > 0) submitCard(searchResults[0]) }} autoComplete="off" />
-                {searchOpen && searchResults.length > 0 && (
-                  <ul className="search-dropdown" style={{ position: 'absolute', top: '100%', left: 0, right: 0 }}>
+              <div className="card-search">
+                <input
+                  ref={searchRef}
+                  className="card-search-input"
+                  placeholder="Search a card…"
+                  value={searchQuery}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  onFocus={() => { if (searchResults.length > 0) { setSearchRect(searchRef.current?.getBoundingClientRect() ?? null); setSearchOpen(true) } }}
+                  onBlur={() => setTimeout(() => setSearchOpen(false), 150)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && searchResults.length > 0) submitCard(searchResults[0]) }}
+                  autoComplete="off"
+                />
+                {searchOpen && searchResults.length > 0 && searchRect && createPortal(
+                  <ul className="search-dropdown" style={{ position: 'fixed', top: searchRect.bottom + 2, left: searchRect.left, width: searchRect.width }}>
                     {searchResults.map((n) => <li key={n} className="search-dropdown-item" onMouseDown={() => submitCard(n)}>{n}</li>)}
-                  </ul>
+                  </ul>,
+                  document.body
                 )}
               </div>
             </div>
