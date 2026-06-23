@@ -40,6 +40,7 @@ npm run build        # Type-check + production build (tsc -b && vite build)
 npm run lint         # ESLint (must pass before committing — runs automatically via pre-commit hook)
 npm run lint:fix     # ESLint with auto-fix
 npm run format       # Prettier write
+npm run format:check # Prettier check (no writes)
 npm run preview      # Preview production build locally
 npm run fetch-cards  # Regenerate public/cards.txt from ygoprodeck API (scripts/fetch-cards.mjs)
 ```
@@ -88,7 +89,7 @@ Never commit a lock file produced by `npm install --legacy-peer-deps` — it cau
 - `src/components/connections/Connections.tsx` — Solo Connections puzzle game (see below).
 - `src/components/wordle/CardWordle.tsx` — Solo Card Wordle: guess a hidden monster card in 6 tries using colour-coded property hints (Attribute, Type, Race, Archetype, Level, ATK, DEF, Banlist). See `wordleUtils.ts`.
 - `src/components/trivia/TriviaBlitz.tsx` — Solo Trivia Blitz: rapid-fire multiple-choice quiz (attribute, archetype, race, frame type, banlist, highest ATK). 15s timer, 3 lives, streak/time bonuses. See `triviaUtils.ts`.
-- `src/components/Leaderboards.tsx` — Standalone leaderboards page showing top 5 for all 9 game modes, read from `localStorage` via `src/services/leaderboard.ts`.
+- `src/components/Leaderboards.tsx` — Standalone leaderboards page showing top 5 across 9 leaderboard categories (8 game modes — Higher or Lower split into ATK/Price/Date), read from `localStorage` via `src/services/leaderboard.ts`.
 - `src/components/card-categories/CardCategories.tsx` — PvP and solo mode for Card Categories game. All PvP networking logic lives here.
 - `src/components/codenames/Codenames.tsx` — Multiplayer-only Codenames game (see below).
 - `src/components/chameleon/Chameleon.tsx` — Multiplayer-only Chameleon social deduction game (see below).

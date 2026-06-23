@@ -1,6 +1,6 @@
 # Card Guesser
 
-A Yu-Gi-Oh! card mini-game web app with six game modes. Built with React + TypeScript + Vite, deployed to GitHub Pages.
+A Yu-Gi-Oh! card mini-game web app with eight game modes. Built with React + TypeScript + Vite, deployed to GitHub Pages.
 
 **[Play it here](https://rl2012.github.io/CardGuesser/)**
 
@@ -50,6 +50,12 @@ Categories are colour-coded by difficulty:
 
 You have 4 mistakes before the game ends. The last group is auto-solved once the other three are found. **Scoring:** `(4 − mistakes) × 100` on a win.
 
+### Card Wordle
+A solo mode where you guess a hidden monster card in 6 tries. After each guess, colour-coded hints reveal how close you are across the card's properties: Attribute, Type, Race, Archetype, Level, ATK, DEF, and Banlist status.
+
+### Trivia Blitz
+A solo rapid-fire multiple-choice quiz about Yu-Gi-Oh! cards (attribute, archetype, race, frame type, banlist status, highest ATK). Each question has a 15-second timer. You have 3 lives, with streak and time bonuses rewarding fast, accurate answers.
+
 ### Chameleon
 A multiplayer-only social deduction game (3–6 players) based on the board game. One player is secretly the **Chameleon** who knows only the topic (e.g. "DARK monsters"); everyone else knows which of the 16 words on a 4×4 grid is the real secret Yu-Gi-Oh! card.
 
@@ -63,7 +69,7 @@ Uses the same WebRTC/WebSocket multiplayer infrastructure as Card Categories and
 
 ## Leaderboards
 
-Card Guesser, all three Higher or Lower modes, Card Categories (solo), and Connections each track your top 5 high scores locally (localStorage). After each game you're prompted to enter your name. View all leaderboards from the **Home** tab.
+Card Guesser, all three Higher or Lower modes, Card Categories (solo), Connections, Card Wordle, and Trivia Blitz each track your top 5 high scores locally (localStorage) — 9 leaderboard categories across the 8 game modes (Higher or Lower is split into ATK, Price, and Date). After each game you're prompted to enter your name. View all leaderboards from the **Home** tab.
 
 ---
 
@@ -76,7 +82,7 @@ Card Guesser, all three Higher or Lower modes, Card Categories (solo), and Conne
 | State | Redux Toolkit |
 | Search | Fuse.js (fuzzy card name matching) |
 | Multiplayer | PeerJS (WebRTC), metered.ca TURN servers |
-| Card data | [YGOProDeck API](https://db.ygoprodeck.com/api-guide/) (`?misc=yes`) |
+| Card data | [YGOProDeck API](https://db.ygoprodeck.com/api-guide/) (`?misc=yes&tcgplayer_data=true`) |
 | Card images | `images.ygoprodeck.com` (external CDN) |
 
 ---
