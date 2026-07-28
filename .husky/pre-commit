@@ -1,1 +1,6 @@
+#!/bin/sh
+# PowerShell files: typographic non-ASCII in code or a string breaks PS 5.1 parsing.
+# Shared rule with the Claude PreToolUse hook; this is the gate a manual Codex session hits.
+NODE=$(command -v node || echo "/c/Program Files/nodejs/node.exe")
+"$NODE" "$HOME/.claude/hooks/guard-windows-syntax.mjs" --staged || exit 1
 "$(dirname "$0")/../node_modules/.bin/eslint" .
