@@ -1,2 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Git hooks must stay LF: core.autocrlf=true would otherwise check this out with
+# CRLF, and sh reads the shebang as "/bin/sh\r" -> bad interpreter.
+.husky/pre-commit text eol=lf
