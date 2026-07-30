@@ -128,7 +128,7 @@ function mapYgoCard(c: YgoCard): Card {
 
 export const fetchCards = createAsyncThunk('cards/fetch', async () => {
   // Try pre-generated static file first
-  const txtRes = await fetch('/CardGuesser/cards.txt').catch(() => null)
+  const txtRes = await fetch(`${import.meta.env.BASE_URL}cards.txt`).catch(() => null)
   if (txtRes?.ok) {
     const text = await txtRes.text()
     return text

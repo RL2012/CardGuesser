@@ -1,8 +1,10 @@
 # Card Guesser
 
-A Yu-Gi-Oh! card mini-game web app with eight game modes. Built with React + TypeScript + Vite, deployed to GitHub Pages.
+A Yu-Gi-Oh! card mini-game web app with eight game modes. Built with React + TypeScript + Vite and installable as a PWA on GitHub Pages.
 
 **[Play it here](https://rl2012.github.io/CardGuesser/)**
+
+Install it from a supported browser for a standalone app experience. The app shell and card database work offline after the first successful load; card images and multiplayer still require a network connection.
 
 ---
 
@@ -82,6 +84,7 @@ Card Guesser, all three Higher or Lower modes, Card Categories (solo), Connectio
 | State | Redux Toolkit |
 | Search | Fuse.js (fuzzy card name matching) |
 | Multiplayer | PeerJS (WebRTC), metered.ca TURN servers |
+| PWA | vite-plugin-pwa + Workbox |
 | Card data | [YGOProDeck API](https://db.ygoprodeck.com/api-guide/) (`?misc=yes&tcgplayer_data=true`) |
 | Card images | `images.ygoprodeck.com` (external CDN) |
 
@@ -104,7 +107,7 @@ Card data is pre-fetched into `public/cards.txt` (pipe-delimited, 16 columns: `i
 
 ## Deployment
 
-Pushes to `main` automatically build and deploy to GitHub Pages via GitHub Actions (`.github/workflows/deploy.yml`).
+Pushes to `main` automatically build and deploy to GitHub Pages via GitHub Actions (`.github/workflows/deploy.yml`). The Vite build generates `manifest.webmanifest`, `sw.js`, the precache manifest, and the install icons in `dist/`.
 
 ---
 
@@ -114,7 +117,9 @@ Pushes to `main` automatically build and deploy to GitHub Pages via GitHub Actio
 
 ## Architecture
 
-**Stack:** React 19 + TypeScript + Vite, Redux Toolkit for game state, Fuse.js for fuzzy search, PeerJS for WebRTC. TypeScript target is ES2022 with `verbatimModuleSyntax` and `erasableSyntaxOnly` enabled (matches YgoDomainBuilder reference config).
+**Stack:** React 19 + TypeScript + Vite, Redux Toolkit for game state, Fuse.js for fuzzy search, PeerJS for WebRTC, and vite-plugin-pwa/Workbox for PWA generation. TypeScript target is ES2022 with `verbatimModuleSyntax` and `erasableSyntaxOnly` enabled (matches YgoDomainBuilder reference config).
+
+**PWA and offline behavior:** `vite.config.ts` generates a prompted-update service worker and a manifest scoped to `/CardGuesser/`. Workbox precaches the built app shell, icons, fallback image, and `cards.txt`; its size limit is raised to 12 MiB because the card database exceeds Workbox's default 2 MiB limit. `App.tsx` reports when offline content is ready, lets players defer a new-version reload until a game is safe to leave, and disables multiplayer while offline. Cross-origin YGOProDeck card images are deliberately not runtime-cached; failed image loads use the same-origin offline placeholder. Card data requests derive from `import.meta.env.BASE_URL` so local and Pages builds use the correct base path.
 
 **Card data loading** (`src/store/cardsSlice.ts`): On startup `App.tsx` dispatches `fetchCards`, which tries `GET /cards.txt` (a pre-generated pipe-delimited flat file) and falls back to the live ygoprodeck API. All game modes gate rendering behind `status === 'succeeded'`. Card images are loaded from `images.ygoprodeck.com/{id}.jpg` (external CDN, not bundled). The `public/cards.txt` format is `id|name|frameType|type|attribute|atk|def|level|race|archetype|sets(JSON)|banTcg|views|viewsWeek|tcgDate|tcgplayerPrice` (16 pipe-delimited columns) — regenerated via `npm run fetch-cards`. Column 15 (`tcgplayerPrice`) comes from `card_prices[0].tcgplayer_price` in the YGOProDeck API; cards with a missing or zero price are excluded from Price Check mode.
 

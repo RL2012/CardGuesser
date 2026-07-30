@@ -32,7 +32,9 @@ export default function CardDisplay({ onSkip, onReplace }: Props) {
             className="card-image"
             style={imgStyle}
             draggable={false}
-            onError={onReplace}
+            onError={() => {
+              if (navigator.onLine) onReplace()
+            }}
           />
         ) : (
           <div className="card-image-placeholder" />

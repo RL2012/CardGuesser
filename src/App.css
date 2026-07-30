@@ -40,6 +40,31 @@
   color: var(--error);
 }
 
+.offline-banner {
+  padding: 0.55rem 1rem;
+  background: #fef3c7;
+  border-bottom: 1px solid #f59e0b;
+  color: #78350f;
+  font-size: 0.8rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+[data-theme='dark'] .offline-banner {
+  background: #422006;
+  color: #fde68a;
+}
+
+img[data-offline-fallback] {
+  object-fit: contain !important;
+}
+
+.card-image[data-offline-fallback] {
+  width: 100% !important;
+  height: 100% !important;
+  inset: 0 !important;
+}
+
 /* ── Game tabs ── */
 .game-tabs {
   display: flex;
@@ -75,6 +100,11 @@
 .game-tab:hover {
   background: var(--surface-hover);
   color: var(--text);
+}
+
+.game-tab:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .game-tab--active {
@@ -115,6 +145,46 @@
   opacity: 0.5;
   pointer-events: none;
   z-index: 0;
+}
+
+.pwa-toast {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 1100;
+  width: min(360px, calc(100vw - 2rem));
+  padding: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 28px var(--shadow);
+}
+
+.pwa-toast p {
+  margin: 0 0 0.75rem;
+  color: var(--text);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.pwa-toast__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.pwa-toast__actions button {
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+.pwa-toast__actions button:last-child {
+  background: transparent;
+  color: var(--accent);
 }
 
 /* ── Hamburger ── */
