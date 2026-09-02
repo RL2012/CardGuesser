@@ -57,3 +57,13 @@ Any change to architecture, game modes, commands, card-data format, or conventio
 ## Global CLAUDE.md propagation
 
 After significant changes (new/removed game modes, dependencies, commands, card data, deployment), update `### CardGuesser` in the workspace-root `CLAUDE.md`.
+
+## Looking at the running app
+
+This repo is the exception to the workspace rule: it has no service on this box, so `npm run dev`
+(5173, plus the relay on 9001) really is how you see it, and `preview_start` with a launch.json
+name is fine here. Everything else in [../CLAUDE.md](../CLAUDE.md) rule 7 still holds. Look at it
+in **the server's real Chrome first** (`mcp__claude-in-chrome__*`: check
+`list_connected_browsers`, then `tabs_context_mcp` and `navigate`), and only after saying in your
+reply that Chrome failed fall back to the sandboxed Browser pane. Do not start a dev server for a
+SIBLING repo while you are in here: those are all already serving on their own ports.
