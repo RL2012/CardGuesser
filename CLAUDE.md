@@ -24,7 +24,7 @@ npm run build        # tsc -b && vite build
 npm run lint         # ESLint (must pass before commit; lint:fix to auto-fix)
 npm run format       # Prettier write (format:check to verify only)
 npm run preview      # Preview production build
-npm run fetch-cards  # Regenerate public/cards.txt from ygoprodeck API (scripts/fetch-cards.mjs)
+npm run fetch-cards  # Manual fallback: regenerate public/cards.txt from YGOProDeck alone
 ```
 
 ## Stack & layout (one-liners; detail in README)
@@ -35,7 +35,8 @@ npm run fetch-cards  # Regenerate public/cards.txt from ygoprodeck API (scripts/
 
 ## Invariants / rules
 
-- **`public/cards.txt`** is 16 pipe-delimited columns: `id|name|frameType|type|attribute|atk|def|level|race|archetype|sets(JSON)|banTcg|views|viewsWeek|tcgDate|tcgplayerPrice`. Keep `fetch-cards.mjs` and all parsers in sync if you change columns. Column 15 `tcgplayerPrice` = `card_prices[0].tcgplayer_price`; cards with missing/zero price are excluded from Price Check mode.
+- **`public/cards.txt`** is 16 pipe-delimited columns: `id|name|frameType|type|attribute|atk|def|level|race|archetype|sets(JSON)|banTcg|views|viewsWeek|tcgDate|tcgplayerPrice`. Price Check reads each printing's `setPrice` from the sets JSON (0 = left out); column 15 is parsed but unused.
+- **YgoDomainBuilder writes `cards.txt`, not this repo.** Its card sync (daily 12:00 poll and admin "Update All Card Info") rebuilds the file with tcgcsv per-printing prices and editions, commits that one file in this checkout on the server and pushes `main`. So: pull before pushing here, and a format change touches THREE places, `YgoDomainBuilder/Helpers/CardGuesserExport.cs`, `scripts/fetch-cards.mjs` (manual fallback, YGOProDeck only) and the parser in `src/store/cardsSlice.ts`. Never use YGOProDeck's `tcgplayer_data`: it was removed on 2026-09-03 and 400s the request.
 - Card data loads via `GET /cards.txt` with a live ygoprodeck API fallback; all modes gate rendering on `status === 'succeeded'`. Card images come from `images.ygoprodeck.com/{id}.jpg` (external CDN, not bundled).
 - **Always use the typed Redux hooks** `useAppDispatch`/`useAppSelector` from `src/hooks/hooks.ts`, never the raw react-redux hooks.
 - Theme via `data-theme` on `<html>`, persisted to `localStorage`; CSS vars per theme in `App.css`.

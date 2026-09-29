@@ -2,7 +2,9 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import type { Card, CardSet } from '../types/types'
 import { applyDataFix } from '../utils/dataFixes'
 
-const YGOPRO_API = 'https://db.ygoprodeck.com/api/v7/cardinfo.php?misc=yes&tcgplayer_data=true'
+// `tcgplayer_data` was removed upstream on 2026-09-03 and now 400s the whole request. Without it the
+// set prices are YGOProDeck's own and there is no edition, which is fine for a last-resort fallback.
+const YGOPRO_API = 'https://db.ygoprodeck.com/api/v7/cardinfo.php?misc=yes'
 
 interface YgoCardSet {
   set_name: string

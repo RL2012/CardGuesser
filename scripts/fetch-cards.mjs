@@ -5,8 +5,13 @@ import { fileURLToPath } from 'url'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const CARDS_TXT = join(__dirname, '..', 'public', 'cards.txt')
 
+// public/cards.txt is normally written by YgoDomainBuilder's daily card sync (its
+// Helpers/CardGuesserExport.cs), which commits and pushes it. That copy takes each printing's
+// TCGplayer price and edition from tcgcsv.com, because YGOProDeck dropped `tcgplayer_data` on
+// 2026-09-03 (the parameter now 400s). This script is the manual fallback: YGOProDeck's own set
+// prices and no editions. Both writers must produce the same 16 columns.
 console.log('Fetching card data from YGOPRODeck…')
-const res = await fetch('https://db.ygoprodeck.com/api/v7/cardinfo.php?misc=yes&tcgplayer_data=true')
+const res = await fetch('https://db.ygoprodeck.com/api/v7/cardinfo.php?misc=yes')
 if (!res.ok) {
   console.error(`API error: ${res.status} ${res.statusText}`)
   process.exit(1)

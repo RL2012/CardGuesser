@@ -85,7 +85,7 @@ Card Guesser, all three Higher or Lower modes, Card Categories (solo), Connectio
 | Search | Fuse.js (fuzzy card name matching) |
 | Multiplayer | PeerJS (WebRTC), metered.ca TURN servers |
 | PWA | vite-plugin-pwa + Workbox |
-| Card data | [YGOProDeck API](https://db.ygoprodeck.com/api-guide/) (`?misc=yes&tcgplayer_data=true`) |
+| Card data | [YGOProDeck API](https://db.ygoprodeck.com/api-guide/) (`?misc=yes`), per-printing prices from [tcgcsv.com](https://tcgcsv.com) via YgoDomainBuilder |
 | Card images | `images.ygoprodeck.com` (external CDN) |
 
 ---
@@ -98,10 +98,10 @@ npm run dev          # Dev server at http://localhost:5173
 npm run build        # Type-check + production build
 npm run lint         # ESLint
 npm run format       # Prettier
-npm run fetch-cards  # Regenerate public/cards.txt from YGOProDeck API
+npm run fetch-cards  # Manual fallback: regenerate public/cards.txt from YGOProDeck alone
 ```
 
-Card data is pre-fetched into `public/cards.txt` (pipe-delimited, 16 columns: `id|name|frameType|type|attribute|atk|def|level|race|archetype|sets(JSON)|banTcg|views|viewsWeek|tcgDate|tcgplayerPrice`) so the app doesn't need to hit the API on every load. Run `npm run fetch-cards` to refresh it.
+Card data is pre-fetched into `public/cards.txt` (pipe-delimited, 16 columns: `id|name|frameType|type|attribute|atk|def|level|race|archetype|sets(JSON)|banTcg|views|viewsWeek|tcgDate|tcgplayerPrice`) so the app doesn't need to hit the API on every load. You normally don't refresh it by hand: YgoDomainBuilder's card sync rewrites it daily and pushes it, which deploys it (see "Card data sync" below).
 
 ---
 
@@ -121,13 +121,17 @@ Pushes to `main` automatically build and deploy to GitHub Pages via GitHub Actio
 
 **PWA and offline behavior:** `vite.config.ts` generates a prompted-update service worker and a manifest scoped to `/CardGuesser/`. Workbox precaches the built app shell, icons, fallback image, and `cards.txt`; its size limit is raised to 12 MiB because the card database exceeds Workbox's default 2 MiB limit. `App.tsx` reports when offline content is ready, lets players defer a new-version reload until a game is safe to leave, and disables multiplayer while offline. Cross-origin YGOProDeck card images are deliberately not runtime-cached; failed image loads use the same-origin offline placeholder. Card data requests derive from `import.meta.env.BASE_URL` so local and Pages builds use the correct base path.
 
-**Card data loading** (`src/store/cardsSlice.ts`): On startup `App.tsx` dispatches `fetchCards`, which tries `GET /cards.txt` (a pre-generated pipe-delimited flat file) and falls back to the live ygoprodeck API. All game modes gate rendering behind `status === 'succeeded'`. Card images are loaded from `images.ygoprodeck.com/{id}.jpg` (external CDN, not bundled). The `public/cards.txt` format is `id|name|frameType|type|attribute|atk|def|level|race|archetype|sets(JSON)|banTcg|views|viewsWeek|tcgDate|tcgplayerPrice` (16 pipe-delimited columns) — regenerated via `npm run fetch-cards`. Column 15 (`tcgplayerPrice`) comes from `card_prices[0].tcgplayer_price` in the YGOProDeck API; cards with a missing or zero price are excluded from Price Check mode.
+**Card data loading** (`src/store/cardsSlice.ts`): On startup `App.tsx` dispatches `fetchCards`, which tries `GET /cards.txt` (a pre-generated pipe-delimited flat file) and falls back to the live ygoprodeck API. All game modes gate rendering behind `status === 'succeeded'`. Card images are loaded from `images.ygoprodeck.com/{id}.jpg` (external CDN, not bundled). The `public/cards.txt` format is `id|name|frameType|type|attribute|atk|def|level|race|archetype|sets(JSON)|banTcg|views|viewsWeek|tcgDate|tcgplayerPrice` (16 pipe-delimited columns). Column 10 is a JSON array of printings, each `{setName, setCode, setRarity, setPrice, setEdition}`. **Price Check reads `setPrice` per printing** and plays only printings priced above zero; column 15 (`tcgplayerPrice`, YGOProDeck's card-level `card_prices[0].tcgplayer_price`) is parsed but no mode reads it.
+
+**Card data sync** (writer: YgoDomainBuilder's `Helpers/CardGuesserExport.cs` + `Managers/CardGuesserPublisher.cs`): YGOProDeck removed its `tcgplayer_data` parameter on 2026-09-03. The parameter now 400s the whole request, and without it `card_sets` has no `set_edition`, its `set_price` is YGOProDeck's own figure, and colour variants collapse into one entry per set code and rarity. YgoDomainBuilder had already moved its per-printing prices to tcgcsv.com's TCGplayer mirror, so it now writes this file too. At the end of every card sync (the daily 12:00 price poll and the admin "Update All Card Info"), it builds the file from the YGOProDeck response it just processed plus its own stored printings, writes it into this repo's local checkout on the server, and if git sees a change, commits `public/cards.txt` alone (a pathspec commit, so other uncommitted work is untouched) and pushes `main`, which deploys Pages. The outcome (`CardGuesser pushed <hash>` / `unchanged` / `publish failed: ...`) is appended to that sync's Run History line on YgoDomainBuilder's admin page. It skips when the checkout is not on `main`, when no GitHub token is configured, or when the new card count is under 90% of the published file's (a truncated upstream answer). Printings are sorted so an unchanged catalogue produces identical text; a printing whose stored price is card-level (`PriceIsCardLevel`) or missing is written with `setPrice` `"0"` so Price Check leaves it out rather than quizzing on the wrong figure. Card names come HTML-decoded. A card YgoDomainBuilder has no stored printings for keeps YGOProDeck's own `card_sets`. Views change daily, so expect a commit a day, about 150 KB of pack growth each.
+
+`npm run fetch-cards` (`scripts/fetch-cards.mjs`) is the manual fallback and writes the same 16 columns from YGOProDeck alone, with no editions and YGOProDeck's own set prices. If you change the format, change both writers and the parser in `cardsSlice.ts` together.
 
 **Redux store** (`src/store/`):
 
 - `cards` — shared card list, loaded once at startup
 - `game` — Card Guesser state: current card, crop position (`cropX`/`cropY` as 0–1 fractions), zoom level (5 = most zoomed, 1 = full card), timers, scores, round history
-- `higherOrLower` — Higher or Lower state; includes `mode: 'atk' | 'price' | 'date'` — ATK Battle compares monster ATK, Price Check compares TCGPlayer prices (cards with price = 0 are excluded), Newer or Older compares TCG release dates (`tcgDate`)
+- `higherOrLower` — Higher or Lower state; includes `mode: 'atk' | 'price' | 'date'` — ATK Battle compares monster ATK, Price Check compares per-printing TCGplayer prices (`setPrice`; printings priced 0 are excluded), Newer or Older compares TCG release dates (`tcgDate`)
 
 **Game modes** are tab-switched in `App.tsx`; each is a self-contained component tree. The nav bar is organized into sections: Home, Leaderboards, then **Solo** games (Card Guesser, Higher or Lower, Connections, Card Wordle, Trivia Blitz) and **Multiplayer** games (Card Categories, Codenames, Chameleon). On mobile (≤600px) the nav collapses into a slide-in hamburger drawer.
 
