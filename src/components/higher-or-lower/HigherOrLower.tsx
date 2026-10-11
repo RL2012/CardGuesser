@@ -254,7 +254,7 @@ export default function HigherOrLower() {
           <div className="hol-card-image-area">
             <img
               src={`https://images.ygoprodeck.com/images/cards_cropped/${leftCard.id}.jpg`}
-              alt={isRevealed ? leftCard.name : 'Card'}
+              alt={leftCard.name}
               className="hol-card-img"
             />
           </div>
@@ -278,6 +278,7 @@ export default function HigherOrLower() {
               </>
             ) : (
               <>
+                <p className="hol-card-name">{leftCard.name}</p>
                 {mode === 'price' && leftCardSet && (
                   <>
                     <p className="hol-card-set">{leftCardSet.setName}</p>
@@ -311,7 +312,7 @@ export default function HigherOrLower() {
           <div className="hol-card-image-area">
             <img
               src={`https://images.ygoprodeck.com/images/cards_cropped/${rightCard.id}.jpg`}
-              alt={isRevealed ? rightCard.name : 'Card'}
+              alt={rightCard.name}
               className="hol-card-img"
             />
           </div>
@@ -335,6 +336,7 @@ export default function HigherOrLower() {
               </>
             ) : (
               <>
+                <p className="hol-card-name">{rightCard.name}</p>
                 {mode === 'price' && rightCardSet && (
                   <>
                     <p className="hol-card-set">{rightCardSet.setName}</p>

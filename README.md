@@ -22,6 +22,8 @@ Three modes, all with 3 lives and streak bonuses every 3 correct answers:
 - **Price Check** — two random card printings; pick which costs more on TCGPlayer.
 - **Newer or Older** — two random cards; pick which was released more recently in the TCG. The release date is revealed after each guess.
 
+Each card's name is shown under its picture before you pick, so you can still tell which card it is when the image fails to load.
+
 ### Card Categories
 A category is shown (e.g. "LIGHT Dragons", "Beast Fusion monsters", "Monsters with 1800 ATK"). Players guess cards that match. Supports **solo** and **multiplayer** modes.
 
