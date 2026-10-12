@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import type { Card, CardSet } from '../types/types'
 import { applyDataFix } from '../utils/dataFixes'
+import { playableCards } from '../utils/cardIds'
 
 // `tcgplayer_data` was removed upstream on 2026-09-03 and now 400s the whole request. Without it the
 // set prices are YGOProDeck's own and there is no edition, which is fine for a last-resort fallback.
@@ -56,13 +57,6 @@ const initialState: CardsState = {
   cards: [],
   status: 'idle',
   error: null,
-}
-
-// YGOProDeck lists announced cards under temporary 9-digit ids (101304014 "Elvennotes Regina") and
-// keeps serving that row after the card is released under its real 8-digit passcode, so it turns up
-// as a duplicate of the real card (56651978 "Elfnote Regina"). Almost none of these ids have an image.
-function isPrereleasePlaceholder(id: number): boolean {
-  return id >= 100_000_000 && id < 200_000_000
 }
 
 function parseNum(s: string | undefined): number | null {
@@ -140,19 +134,20 @@ export const fetchCards = createAsyncThunk('cards/fetch', async () => {
   const txtRes = await fetch(`${import.meta.env.BASE_URL}cards.txt`).catch(() => null)
   if (txtRes?.ok) {
     const text = await txtRes.text()
-    return text
-      .split('\n')
-      .map((l) => l.trim())
-      .filter(Boolean)
-      .map(parseLine)
-      .filter((c) => !isPrereleasePlaceholder(c.id))
+    return playableCards(
+      text
+        .split('\n')
+        .map((l) => l.trim())
+        .filter(Boolean)
+        .map(parseLine),
+    )
   }
 
   // Fall back to live API
   const apiRes = await fetch(YGOPRO_API)
   if (!apiRes.ok) throw new Error(`API error ${apiRes.status}`)
   const json: YgoResponse = await apiRes.json()
-  return json.data.map(mapYgoCard).filter((c) => !isPrereleasePlaceholder(c.id))
+  return playableCards(json.data.map(mapYgoCard))
 })
 
 const cardsSlice = createSlice({
