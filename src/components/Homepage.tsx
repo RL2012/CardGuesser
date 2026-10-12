@@ -109,6 +109,21 @@ export default function Homepage({ onPlay }: Props) {
             Play
           </button>
         </div>
+
+        <div className="game-mode-card">
+          <div className="game-mode-card__header">
+            <span className="game-mode-card__icon">🎭</span>
+            <h2 className="game-mode-card__title">Charades</h2>
+          </div>
+          <p className="game-mode-card__desc">
+            Multiplayer team charades, min. 4 players. The describer gets a random card and describes
+            it over voice chat without saying its name — skip cards you can't get, mark one guessed to
+            score. 60 seconds per turn, 3 turns per team.
+          </p>
+          <button className="hol-btn game-mode-card__btn" onClick={() => onPlay('charades')}>
+            Play
+          </button>
+        </div>
       </div>
     </div>
   )

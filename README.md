@@ -1,6 +1,6 @@
 # Card Guesser
 
-A Yu-Gi-Oh! card mini-game web app with eight game modes. Built with React + TypeScript + Vite and installable as a PWA on GitHub Pages.
+A Yu-Gi-Oh! card mini-game web app with nine game modes. Built with React + TypeScript + Vite and installable as a PWA on GitHub Pages.
 
 **[Play it here](https://rl2012.github.io/CardGuesser/)**
 
@@ -69,6 +69,13 @@ Players take turns saying **one word** to prove they know the card. After all ha
 
 Uses the same WebRTC/WebSocket multiplayer infrastructure as Card Categories and Codenames.
 
+### Charades
+A multiplayer-only team game (minimum 4 players, at least 2 per team) split into Red and Blue teams. Each turn, one team's **describer** gets a random card and describes it over voice chat (not in-app) without saying its name, while their teammates guess out loud.
+
+Before guessing starts, the describer sees a **prep screen** showing their card and a button to start the 60-second guessing round. During the round, the describer can **Skip** a card they can't describe or mark **Got It!** to score a point for their team and draw a new card; skipped cards don't score. After 60 seconds the turn ends automatically and the other team gets a turn. Each team gets 3 turns (6 turns total, alternating); describer rotates within a team each time it's their turn. Highest combined score when all turns are used wins (a tie is possible).
+
+Uses the same WebRTC/WebSocket multiplayer infrastructure as Card Categories, Codenames, and Chameleon.
+
 ---
 
 ## Leaderboards
@@ -136,7 +143,7 @@ Pushes to `main` automatically build and deploy to GitHub Pages via GitHub Actio
 - `game` — Card Guesser state: current card, crop position (`cropX`/`cropY` as 0–1 fractions), zoom level (5 = most zoomed, 1 = full card), timers, scores, round history
 - `higherOrLower` — Higher or Lower state; includes `mode: 'atk' | 'price' | 'date'` — ATK Battle compares monster ATK, Price Check compares per-printing TCGplayer prices (`setPrice`; printings priced 0 are excluded), Newer or Older compares TCG release dates (`tcgDate`)
 
-**Game modes** are tab-switched in `App.tsx`; each is a self-contained component tree. The nav bar is organized into sections: Home, Leaderboards, then **Solo** games (Card Guesser, Higher or Lower, Connections, Card Wordle, Trivia Blitz) and **Multiplayer** games (Card Categories, Codenames, Chameleon). On mobile (≤600px) the nav collapses into a slide-in hamburger drawer.
+**Game modes** are tab-switched in `App.tsx`; each is a self-contained component tree. The nav bar is organized into sections: Home, Leaderboards, then **Solo** games (Card Guesser, Higher or Lower, Connections, Card Wordle, Trivia Blitz) and **Multiplayer** games (Card Categories, Codenames, Chameleon, Charades). On mobile (≤600px) the nav collapses into a slide-in hamburger drawer.
 
 - `src/components/card-guesser/` — four components: `CardGuesser` (orchestrator with timers), `CardDisplay` (CSS crop/zoom), `CardSearch` (Fuse.js autocomplete), `PreviousRounds`
 - `src/components/higher-or-lower/HigherOrLower.tsx` — self-contained with its own Redux slice
@@ -147,6 +154,7 @@ Pushes to `main` automatically build and deploy to GitHub Pages via GitHub Actio
 - `src/components/card-categories/CardCategories.tsx` — PvP and solo mode for Card Categories game. All PvP networking logic lives here.
 - `src/components/codenames/Codenames.tsx` — Multiplayer-only Codenames game (see below).
 - `src/components/chameleon/Chameleon.tsx` — Multiplayer-only Chameleon social deduction game (see below).
+- `src/components/charades/Charades.tsx` — Multiplayer-only Charades team game (see below).
 
 **Shared multiplayer layer** (`src/multiplayer/`): Extracted from Card Categories so both multiplayer games share it.
 
@@ -177,6 +185,11 @@ Pushes to `main` automatically build and deploy to GitHub Pages via GitHub Actio
 
 - **`Chameleon.tsx`** — Main component: lobby, host-authoritative game logic, turn-based speaking, voting, board-click guess, per-game chat.
 - **`chameleonTypes.ts`** — Re-exports shared types; defines `ChameleonPlayer`, `PlayerWord`, `ChameleonGameState` (with `gridWords` and `secretWordIndex`), `ToHostMsg`, `ToClientMsg`.
+
+**Charades** (`src/components/charades/`): Multiplayer-only team game (minimum 4 players, at least 2 per team), two teams (Red/Blue). Turns alternate between teams, 3 turns per team (6 total, `TURNS_PER_TEAM` in `charadesTypes.ts`). The describer for a turn rotates round-robin through that team's player order (shuffled once at game start). The host draws a random card from a shuffled deck of the whole card pool (reshuffled when exhausted) and sends it **only to the describer's connection** (`your-card`/`next-card` messages, never broadcast) so teammates and the other team never see the word or image — describing happens over voice chat outside the app. The game has four phases per turn: `prep` (describer sees their card and a "Start Guessing Round" button), `guessing` (60-second host-authoritative countdown via `setTimeout`, Skip/Got It! buttons draw the next card and update the shared score), `turn-over` (brief results summary, auto-advances after 3s), and `game-over` once all 6 turns are played (highest combined score wins; a tie is possible). Unlike Codenames, there's no per-role (Spymaster) concept — any team member can join either team, and only whoever the host currently names describer can act.
+
+- **`Charades.tsx`** — Main component: lobby with team selection, host-authoritative turn/timer/deck logic, privacy-scoped card delivery (`sendToPlayer`), per-game chat.
+- **`charadesTypes.ts`** — Re-exports shared types; defines `Team`, `CharadesPlayer`, `CharadesGameState`, `TurnCardResult`, `ToHostMsg`, `ToClientMsg`, and constants `MIN_PLAYERS_CZ`/`MAX_PLAYERS_CZ`/`TURNS_PER_TEAM`/`ROUND_DURATION_MS`.
 
 **Scoring** (Card Guesser): Points by zoom level `[0, 100, 300, 500, 700, 1000]` minus `wrongGuesses.length * 100`, min 0. 60-second per-card timer, 15-minute (900s) challenge timer, both counted down by a single `tickSecond` Redux action on a `setInterval`.
 

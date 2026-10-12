@@ -8,6 +8,7 @@ import CardCategories from './components/card-categories/CardCategories'
 import Codenames from './components/codenames/Codenames'
 import Connections from './components/connections/Connections'
 import Chameleon from './components/chameleon/Chameleon'
+import Charades from './components/charades/Charades'
 import CardWordle from './components/wordle/CardWordle'
 import TriviaBlitz from './components/trivia/TriviaBlitz'
 import Leaderboards from './components/Leaderboards'
@@ -23,10 +24,11 @@ type GameMode =
   | 'codenames'
   | 'connections'
   | 'chameleon'
+  | 'charades'
   | 'wordle'
   | 'trivia'
 
-const MULTIPLAYER_GAMES: GameMode[] = ['card-categories', 'codenames', 'chameleon']
+const MULTIPLAYER_GAMES: GameMode[] = ['card-categories', 'codenames', 'chameleon', 'charades']
 
 export default function App() {
   const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark')
@@ -166,6 +168,13 @@ export default function App() {
           >
             Chameleon
           </button>
+          <button
+            className={`game-tab${activeGame === 'charades' ? ' game-tab--active' : ''}`}
+            onClick={() => { setActiveGame('charades'); setMenuOpen(false) }}
+            disabled={!isOnline}
+          >
+            Charades
+          </button>
         </nav>
         {menuOpen && <div className="menu-overlay" onClick={() => setMenuOpen(false)} />}
       </header>
@@ -201,6 +210,7 @@ export default function App() {
           {isOnline && activeGame === 'codenames' && <Codenames />}
           {activeGame === 'connections' && <Connections />}
           {isOnline && activeGame === 'chameleon' && <Chameleon />}
+          {isOnline && activeGame === 'charades' && <Charades />}
           {activeGame === 'wordle' && <CardWordle />}
           {activeGame === 'trivia' && <TriviaBlitz />}
         </>
