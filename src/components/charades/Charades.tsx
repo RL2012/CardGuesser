@@ -909,7 +909,7 @@ export default function Charades(): ReactElement {
                     <div className="cz-card-preview">
                       <img
                         className="cz-card-preview__img"
-                        src={`https://images.ygoprodeck.com/${myCard.id}.jpg`}
+                        src={`https://images.ygoprodeck.com/images/cards/${myCard.id}.jpg`}
                         alt=""
                       />
                       <div className="cz-card-preview__name">{myCard.word}</div>
@@ -956,7 +956,7 @@ export default function Charades(): ReactElement {
                   <div className="cz-card-preview cz-card-preview--active">
                     <img
                       className="cz-card-preview__img"
-                      src={`https://images.ygoprodeck.com/${myCard.id}.jpg`}
+                      src={`https://images.ygoprodeck.com/images/cards/${myCard.id}.jpg`}
                       alt=""
                     />
                     <div className="cz-card-preview__name">{myCard.word}</div>
