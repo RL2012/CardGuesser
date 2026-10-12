@@ -15,6 +15,7 @@ import {
   type CharadesPlayer,
   type ChatMessage,
   type TurnCardResult,
+  type LoggedCard,
   type CharadesGameState,
   type ToHostMsg,
   type ToClientMsg,
@@ -70,6 +71,7 @@ export default function Charades(): ReactElement {
   // Game state
   const [gameState, setGameState] = useState<CharadesGameState>(INIT_GAME)
   const [myCard, setMyCard] = useState<{ id: number; word: string } | null>(null)
+  const [cardLog, setCardLog] = useState<LoggedCard[]>([])
   const [, setCountdownTick] = useState(0)
 
   // Refs for stable access inside event handlers
@@ -228,6 +230,7 @@ export default function Charades(): ReactElement {
     gameStateRef.current = gs
     setGameState(gs)
     setMyCard(null)
+    setCardLog([])
     inGameRef.current = true
     broadcast({ type: 'game-started', totalTurns })
     setLobbyPhase('game')
@@ -296,7 +299,14 @@ export default function Charades(): ReactElement {
     if (gs.phase !== 'guessing') return
     const hg = hostGameRef.current
     const lastTurnResults = hg.turnResults
-    broadcastAndApply({ type: 'turn-ended', scoreRed: gs.scoreRed, scoreBlue: gs.scoreBlue, lastTurnResults })
+    broadcastAndApply({
+      type: 'turn-ended',
+      turnNumber: gs.turnNumber,
+      activeTeam: gs.activeTeam,
+      scoreRed: gs.scoreRed,
+      scoreBlue: gs.scoreBlue,
+      lastTurnResults,
+    })
 
     setTimeout(() => {
       if (!inGameRef.current) return
@@ -348,6 +358,7 @@ export default function Charades(): ReactElement {
       gameStateRef.current = next
       setGameState(next)
       setMyCard(null)
+      setCardLog([])
       inGameRef.current = true
       setLobbyPhase('game')
       return
@@ -404,6 +415,10 @@ export default function Charades(): ReactElement {
       gameStateRef.current = next
       setGameState(next)
       setMyCard(null)
+      setCardLog((prev) => [
+        ...prev,
+        ...msg.lastTurnResults.map((r) => ({ ...r, turnNumber: msg.turnNumber, team: msg.activeTeam })),
+      ])
       return
     }
     if (msg.type === 'game-over') {
@@ -418,6 +433,7 @@ export default function Charades(): ReactElement {
       gameStateRef.current = INIT_GAME
       setGameState(INIT_GAME)
       setMyCard(null)
+      setCardLog([])
       setLobbyPhase('room')
       return
     }
@@ -427,6 +443,7 @@ export default function Charades(): ReactElement {
       gameStateRef.current = INIT_GAME
       setGameState(INIT_GAME)
       setMyCard(null)
+      setCardLog([])
       setLobbyPhase('room')
       addChat({ name: '', text: `${msg.name} disconnected. The game has been reset.`, self: false })
       return
@@ -448,6 +465,7 @@ export default function Charades(): ReactElement {
     setLobbyPhase('setup')
     setGameState(INIT_GAME)
     setMyCard(null)
+    setCardLog([])
     setPlayers([])
     setChatMessages([])
     setMyPeerId(null)
@@ -504,6 +522,7 @@ export default function Charades(): ReactElement {
           gameStateRef.current = INIT_GAME
           setGameState(INIT_GAME)
           setMyCard(null)
+          setCardLog([])
           setLobbyPhase('room')
           broadcast({ type: 'player-disconnected-reset', name: leaving.name } satisfies ToClientMsg)
           addChat({ name: '', text: `${leaving.name} disconnected. The game has been reset.`, self: false })
@@ -642,6 +661,7 @@ export default function Charades(): ReactElement {
     gameStateRef.current = INIT_GAME
     setGameState(INIT_GAME)
     setMyCard(null)
+    setCardLog([])
     if (isHostRef.current) {
       broadcast({ type: 'back-to-lobby' })
     }
@@ -1018,6 +1038,21 @@ export default function Charades(): ReactElement {
               </div>
             ))}
           </div>
+
+          {cardLog.length > 0 && (
+            <div className="ch-sidebar__section">
+              <div className="ch-sidebar__heading">Card Log</div>
+              <ul className="cz-card-log">
+                {cardLog.map((entry, i) => (
+                  <li key={i} className={`cz-card-log__item${entry.result === 'correct' ? ' cz-card-log__item--correct' : ' cz-card-log__item--skipped'}`}>
+                    <span className={`cz-card-log__dot cz-card-log__dot--${entry.team}`} />
+                    <span className="cz-card-log__word">{entry.word}</span>
+                    <span className="cz-card-log__icon">{entry.result === 'correct' ? '✓' : '⏭'}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <div className="pvp-chat ch-sidebar__chat">
             <div className="pvp-chat__messages">

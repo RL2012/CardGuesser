@@ -22,6 +22,14 @@ export interface TurnCardResult {
   result: 'correct' | 'skipped'
 }
 
+// A card from a turn that has already ended, kept around for the whole game's card log —
+// unlike TurnCardResult (scoped to a single just-finished turn), this carries enough context
+// (which turn, which team) to render a running history across every turn played so far.
+export interface LoggedCard extends TurnCardResult {
+  turnNumber: number
+  team: Team
+}
+
 export type GamePhase = 'prep' | 'guessing' | 'turn-over' | 'game-over'
 
 export interface CharadesGameState {
@@ -63,7 +71,7 @@ export type ToClientMsg =
   | { type: 'guessing-started'; turnDeadline: number }
   | { type: 'card-progress'; result: 'correct' | 'skipped'; turnCorrect: number; turnSkipped: number; scoreRed: number; scoreBlue: number }
   | { type: 'next-card'; id: number; word: string }
-  | { type: 'turn-ended'; scoreRed: number; scoreBlue: number; lastTurnResults: TurnCardResult[] }
+  | { type: 'turn-ended'; turnNumber: number; activeTeam: Team; scoreRed: number; scoreBlue: number; lastTurnResults: TurnCardResult[] }
   | { type: 'game-over'; scoreRed: number; scoreBlue: number; winner: Team | null }
   | { type: 'back-to-lobby' }
   | { type: 'game-in-progress' }
