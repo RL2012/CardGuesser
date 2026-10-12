@@ -14,7 +14,7 @@ Every push to `main` triggers a GitHub Actions deploy to GitHub Pages (`.github/
 - `npm test` (`node --test` over `tests/**/*.test.ts`, no test framework installed: Node 24 strips the types itself, so a file under test must import with explicit `.ts` extensions or have no imports)
 - `npm ci` (lock file is CI-compatible)
 
-The test suite is small (card-id filtering only) and has no coverage target. GitHub Actions does not run it.
+The test suite is small (card-id filtering and Trivia Blitz's highest ATK question) and has no coverage target. GitHub Actions does not run it.
 
 ## Commands
 

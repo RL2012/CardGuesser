@@ -175,12 +175,15 @@ export function generateQuestion(cards: Card[]): Question {
       const pool = shuffle(withAtk).slice(0, 8)
       const sorted = pool.sort((a, b) => (b.atk ?? 0) - (a.atk ?? 0))
       const top = sorted[0]
-      const options = shuffle(sorted.slice(0, 4).map((c) => `${c.name} (ATK ${c.atk})`))
+      // The ATK is hidden, so a tie for the top would make two answers correct
+      const others = sorted.filter((c) => (c.atk ?? 0) < (top.atk ?? 0)).slice(0, 3)
+      if (others.length < 3) return generateQuestion(cards)
+      const options = shuffle([top, ...others].map((c) => c.name))
       return {
         type,
         prompt: 'Which of these cards has the highest ATK?',
         options,
-        correctIndex: options.indexOf(`${top.name} (ATK ${top.atk})`),
+        correctIndex: options.indexOf(top.name),
       }
     }
   }
