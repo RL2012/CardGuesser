@@ -58,6 +58,13 @@ const initialState: CardsState = {
   error: null,
 }
 
+// YGOProDeck lists announced cards under temporary 9-digit ids (101304014 "Elvennotes Regina") and
+// keeps serving that row after the card is released under its real 8-digit passcode, so it turns up
+// as a duplicate of the real card (56651978 "Elfnote Regina"). Almost none of these ids have an image.
+function isPrereleasePlaceholder(id: number): boolean {
+  return id >= 100_000_000 && id < 200_000_000
+}
+
 function parseNum(s: string | undefined): number | null {
   if (s === undefined || s === '') return null
   const n = parseInt(s)
@@ -138,13 +145,14 @@ export const fetchCards = createAsyncThunk('cards/fetch', async () => {
       .map((l) => l.trim())
       .filter(Boolean)
       .map(parseLine)
+      .filter((c) => !isPrereleasePlaceholder(c.id))
   }
 
   // Fall back to live API
   const apiRes = await fetch(YGOPRO_API)
   if (!apiRes.ok) throw new Error(`API error ${apiRes.status}`)
   const json: YgoResponse = await apiRes.json()
-  return json.data.map(mapYgoCard)
+  return json.data.map(mapYgoCard).filter((c) => !isPrereleasePlaceholder(c.id))
 })
 
 const cardsSlice = createSlice({
