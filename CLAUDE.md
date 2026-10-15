@@ -71,3 +71,11 @@ in **the server's real Chrome first** (`mcp__claude-in-chrome__*`: check
 `list_connected_browsers`, then `tabs_context_mcp` and `navigate`), and only after saying in your
 reply that Chrome failed fall back to the sandboxed Browser pane. Do not start a dev server for a
 SIBLING repo while you are in here: those are all already serving on their own ports.
+
+---
+
+## Folded in from the workspace-root CLAUDE.md (2026-10-15)
+
+### CardGuesser
+
+CardGuesser is an installable GitHub Pages PWA generated with `vite-plugin-pwa`; its app shell and `cards.txt` are precached, while remote card images and multiplayer remain online-only. Its `public/cards.txt` is written by **YgoDomainBuilder**, not by its own script: Ygo's manual admin "Update All Card Info" sync (not its daily price poll) rebuilds it with tcgcsv per-printing prices and editions, commits that one file in the local checkout and pushes `main` (since 2026-09-30, because YGOProDeck's removed `tcgplayer_data` had left `fetch-cards.mjs` 400ing). Pull before pushing CardGuesser; `npm run fetch-cards` is only a YGOProDeck-alone fallback.
