@@ -117,7 +117,7 @@ Card data is pre-fetched into `public/cards.txt` (pipe-delimited, 16 columns: `i
 
 ## Deployment
 
-Pushes to `main` automatically build and deploy to GitHub Pages via GitHub Actions (`.github/workflows/deploy.yml`). The Vite build generates `manifest.webmanifest`, `sw.js`, the precache manifest, and the install icons in `dist/`.
+Pushes to `main` automatically build and deploy to GitHub Pages via GitHub Actions (`.github/workflows/deploy.yml`). The workflow runs on Node 24 and does `npm ci`, `npm run lint`, `npm test`, then `npm run build`. If lint or a test fails, nothing deploys and the live site keeps the previous build. That matters for card data: `tests/cardIds.test.ts` reads `public/cards.txt`, so a bad file pushed by YgoDomainBuilder's sync fails the run instead of going live. The Vite build generates `manifest.webmanifest`, `sw.js`, the precache manifest, and the install icons in `dist/`.
 
 ---
 

@@ -4,7 +4,7 @@ Terse agent brief. Full architecture/feature detail lives in `README.md` → **"
 
 ## 🚨 Deployment — push to main = production deploy
 
-Every push to `main` triggers a GitHub Actions deploy to GitHub Pages (`.github/workflows/deploy.yml`: `npm ci && npm run build`, publishes `dist/` to `https://rl2012.github.io/CardGuesser/`).
+Every push to `main` triggers a GitHub Actions deploy to GitHub Pages (`.github/workflows/deploy.yml`, Node 24: `npm ci`, `npm run lint`, `npm test`, `npm run build`, publishes `dist/` to `https://rl2012.github.io/CardGuesser/`).
 
 **After every committed code change you MUST push to `main`** so the deploy fires. Never commit without pushing.
 
@@ -14,7 +14,7 @@ Every push to `main` triggers a GitHub Actions deploy to GitHub Pages (`.github/
 - `npm test` (`node --test` over `tests/**/*.test.ts`, no test framework installed: Node 24 strips the types itself, so a file under test must import with explicit `.ts` extensions or have no imports)
 - `npm ci` (lock file is CI-compatible)
 
-The test suite is small (card-id filtering and Trivia Blitz's highest ATK question) and has no coverage target. GitHub Actions does not run it.
+The test suite is small (card-id filtering and Trivia Blitz's highest ATK question) and has no coverage target. GitHub Actions runs it and lint before the build, so a failing test (including a bad `public/cards.txt` from YgoDomainBuilder's sync) blocks the deploy.
 
 ## Commands
 
