@@ -14,7 +14,7 @@ Every push to `main` triggers a GitHub Actions deploy to GitHub Pages (`.github/
 - `npm test` (`node --test` over `tests/**/*.test.ts`, no test framework installed: Node 24 strips the types itself, so a file under test must import with explicit `.ts` extensions or have no imports)
 - `npm ci` (lock file is CI-compatible)
 
-The test suite is small (card-id filtering and Trivia Blitz's highest ATK question) and has no coverage target. GitHub Actions runs it and lint before the build, so a failing test (including a bad `public/cards.txt` from YgoDomainBuilder's sync) blocks the deploy.
+The test suite is small (card-id filtering, the 16-column `cards.txt` parser and Trivia Blitz's highest ATK question) and has no coverage target. GitHub Actions runs it and lint before the build, so a failing test (including a bad `public/cards.txt` from YgoDomainBuilder's sync) blocks the deploy.
 
 ## Commands
 
@@ -40,7 +40,7 @@ npm run fetch-cards  # Manual fallback: regenerate public/cards.txt from YGOProD
 ## Invariants / rules
 
 - **`public/cards.txt`** is 16 pipe-delimited columns: `id|name|frameType|type|attribute|atk|def|level|race|archetype|sets(JSON)|banTcg|views|viewsWeek|tcgDate|tcgplayerPrice`. Price Check reads each printing's `setPrice` from the sets JSON (0 = left out); column 15 is parsed but unused.
-- **YgoDomainBuilder writes `cards.txt`, not this repo.** Its manual admin "Update All Card Info" sync (not the daily price poll) rebuilds the file with tcgcsv per-printing prices and editions, commits that one file in this checkout on the server and pushes `main`. So: pull before pushing here, and a format change touches THREE places, `YgoDomainBuilder/Helpers/CardGuesserExport.cs`, `scripts/fetch-cards.mjs` (manual fallback, YGOProDeck only) and the parser in `src/store/cardsSlice.ts`. Never use YGOProDeck's `tcgplayer_data`: it was removed on 2026-09-03 and 400s the request.
+- **YgoDomainBuilder writes `cards.txt`, not this repo.** Its manual admin "Update All Card Info" sync (not the daily price poll) rebuilds the file with tcgcsv per-printing prices and editions, commits that one file in this checkout on the server and pushes `main`. So: pull before pushing here, and a format change touches THREE places, `YgoDomainBuilder/Helpers/CardGuesserExport.cs`, `scripts/fetch-cards.mjs` (manual fallback, YGOProDeck only) and the parser `parseLine` in `src/utils/cardsParse.ts` (pinned by `tests/cardsParse.test.ts`). Never use YGOProDeck's `tcgplayer_data`: it was removed on 2026-09-03 and 400s the request.
 - Card data loads via `GET /cards.txt` with a live ygoprodeck API fallback; all modes gate rendering on `status === 'succeeded'`. Both paths go through `playableCards` (`src/utils/cardIds.ts`), which drops YGOProDeck's pre-release ids (100,000,000 to 199,999,999) and repeated ids: upstream keeps serving pre-release rows after release, so they duplicate the real card and almost never have an image. YgoDomainBuilder's export drops the same range. Card images come from `images.ygoprodeck.com/images/cards/{id}.jpg` (full card, `cards_cropped/` for the artwork only; the bare `/{id}.jpg` path 404s) (external CDN, not bundled).
 - **Always use the typed Redux hooks** `useAppDispatch`/`useAppSelector` from `src/hooks/hooks.ts`, never the raw react-redux hooks.
 - Theme via `data-theme` on `<html>`, persisted to `localStorage`; CSS vars per theme in `App.css`.
