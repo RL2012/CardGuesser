@@ -1,14 +1,12 @@
 import { useRef, useState, useMemo, useCallback, useEffect, type ReactElement } from 'react'
-import Peer from 'peerjs'
 import Fuse from 'fuse.js'
 import { useAppSelector } from '../../hooks/hooks'
 import ScoreEntry from '../ScoreEntry'
 import { addScore } from '../../services/leaderboard'
 import { generateCategories, cardMatchesCategory } from './categoryUtils'
 import type { Category, GuessRecord } from './categoryUtils'
-import { createLocalPeer } from '../../multiplayer/transport'
+import { createPeer, type MultiplayerPeer } from '../../multiplayer/shared'
 import {
-  ICE_SERVERS,
   MAX_PLAYERS,
   type PlayerInfo,
   type ChatMessage,
@@ -100,8 +98,7 @@ export default function CardCategories() {
   const [turnDeadline, setTurnDeadline] = useState<number | null>(null)
 
   // Refs for stable access inside event handlers
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const peerRef = useRef<any>(null)
+  const peerRef = useRef<MultiplayerPeer | null>(null)
   const myNameRef = useRef('')
   const myPeerIdRef = useRef('')
   const isHostRef = useRef(false)
@@ -777,22 +774,14 @@ export default function CardCategories() {
     isSoloRef.current = false
     setIsHost(true)
     setIsSolo(false)
-    // On localhost use WebSocket relay transport (scripts/relay-server.mjs)
-    // instead of PeerJS/WebRTC. Firefox private mode isolates mDNS ICE candidates
-    // and partitions BroadcastChannel, making both WebRTC and BroadcastChannel
-    // fail between normal + private tabs.
-    const isLocalDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const peer: any = isLocalDev
-      ? createLocalPeer()
-      : new Peer({ config: { iceServers: ICE_SERVERS } })
+    const peer = createPeer()
     peerRef.current = peer
     peer.on('open', (id: string) => {
       myPeerIdRef.current = id
       setMyPeerId(id)
       setLobbyPhase('lobby')
     })
-    peer.on('connection', (conn: AnyDataConnection) => {
+    peer.on('connection', (conn) => {
       if (!isHostRef.current || playersRef.current.length >= MAX_PLAYERS - 1) {
         conn.close()
         return

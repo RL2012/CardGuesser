@@ -1,4 +1,4 @@
-export { ICE_SERVERS, type AnyDataConnection } from '../../multiplayer/shared'
+export { type AnyDataConnection, type ChatMessage } from '../../multiplayer/shared'
 
 export const MAX_PLAYERS_CH = 6
 export const MIN_PLAYERS_CH = 3
@@ -8,8 +8,6 @@ export interface ChameleonPlayer {
   name: string
   score: number
 }
-
-export interface ChatMessage { id: number; name: string; text: string; self: boolean }
 
 export interface PlayerWord {
   peerId: string

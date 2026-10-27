@@ -1,11 +1,8 @@
 import { useRef, useState, useCallback, useEffect, type ReactElement } from 'react'
-import Peer from 'peerjs'
 import type { DataConnection } from 'peerjs'
 import { useAppSelector } from '../../hooks/hooks'
-import { createLocalPeer } from '../../multiplayer/transport'
-import type { LocalConnection } from '../../multiplayer/transport'
+import { createPeer, type MultiplayerPeer } from '../../multiplayer/shared'
 import {
-  ICE_SERVERS,
   MIN_PLAYERS_CZ,
   MAX_PLAYERS_CZ,
   TURNS_PER_TEAM,
@@ -75,8 +72,7 @@ export default function Charades(): ReactElement {
   const [, setCountdownTick] = useState(0)
 
   // Refs for stable access inside event handlers
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const peerRef = useRef<any>(null)
+  const peerRef = useRef<MultiplayerPeer | null>(null)
   const myNameRef = useRef('')
   const myPeerIdRef = useRef('')
   const isHostRef = useRef(false)
@@ -708,9 +704,7 @@ export default function Charades(): ReactElement {
       myNameRef.current = n
       isHostRef.current = true
       setIsHost(true)
-      const isLocalDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const peer: any = isLocalDev ? createLocalPeer() : new Peer({ config: { iceServers: ICE_SERVERS } })
+      const peer = createPeer()
       peerRef.current = peer
       peer.on('open', (id: string) => {
         myPeerIdRef.current = id
@@ -719,12 +713,12 @@ export default function Charades(): ReactElement {
         playersRef.current = [hostPlayer]
         setPlayers([hostPlayer])
       })
-      peer.on('connection', (conn: AnyDataConnection | LocalConnection) => {
+      peer.on('connection', (conn) => {
         if (!isHostRef.current || clientConnsRef.current.size >= MAX_PLAYERS_CZ - 1) {
           conn.close()
           return
         }
-        wireClientConn(conn as AnyDataConnection)
+        wireClientConn(conn)
         if (!inGameRef.current) setLobbyPhase('room')
       })
       peer.on('error', (err: Error) => setPeerError(err.message))

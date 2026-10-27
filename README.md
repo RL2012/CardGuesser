@@ -156,12 +156,12 @@ Pushes to `main` automatically build and deploy to GitHub Pages via GitHub Actio
 - `src/components/chameleon/Chameleon.tsx` — Multiplayer-only Chameleon social deduction game (see below).
 - `src/components/charades/Charades.tsx` — Multiplayer-only Charades team game (see below).
 
-**Shared multiplayer layer** (`src/multiplayer/`): Extracted from Card Categories so both multiplayer games share it.
+**Shared multiplayer layer** (`src/multiplayer/`): Extracted from Card Categories so all four multiplayer games (Card Categories, Codenames, Chameleon, Charades) share it.
 
 - **`src/multiplayer/transport.ts`** — WebSocket relay transport (`LocalConnection`, `createLocalPeer`). Replaces PeerJS/WebRTC on localhost (Firefox compat — see below). Not used in production.
-- **`src/multiplayer/shared.ts`** — `ICE_SERVERS` (metered.ca TURN), `PlayerInfo`, `AnyDataConnection` union type.
+- **`src/multiplayer/shared.ts`** — `ICE_SERVERS` (metered.ca TURN), `PlayerInfo`, `ChatMessage`, the `AnyDataConnection` union type, the `MultiplayerPeer` interface and `createPeer()`. `createPeer()` returns the relay peer on localhost and a PeerJS `Peer` with `ICE_SERVERS` elsewhere; every lobby calls it instead of building a peer.
 
-**PvP networking pattern** (star topology — used by both Card Categories and Codenames): the first player becomes host; others connect peer-to-peer to the host's peer ID. The host is authoritative and relays `ToClientMsg` to all clients. Non-hosts send `ToHostMsg` only to the host. On localhost, `createLocalPeer()` replaces PeerJS with a WebSocket relay (`scripts/relay-server.mjs`, started alongside Vite via `npm run dev`) because Firefox private mode isolates mDNS ICE candidates and partitions BroadcastChannel. Production uses real PeerJS with TURN relays.
+**PvP networking pattern** (star topology — used by both Card Categories and Codenames): the first player becomes host; others connect peer-to-peer to the host's peer ID. The host is authoritative and relays `ToClientMsg` to all clients. Non-hosts send `ToHostMsg` only to the host. On localhost, `createPeer()` returns the peer from `createLocalPeer()` instead of PeerJS, using a WebSocket relay (`scripts/relay-server.mjs`, started alongside Vite via `npm run dev`) because Firefox private mode isolates mDNS ICE candidates and partitions BroadcastChannel. Production uses real PeerJS with TURN relays.
 
 **Card Categories** (`src/components/card-categories/`):
 

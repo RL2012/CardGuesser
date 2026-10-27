@@ -1,10 +1,8 @@
 // ── Network constants & message types (Card Categories, multiplayer-only) ─────
 
-export { ICE_SERVERS, type PlayerInfo, type AnyDataConnection } from '../../multiplayer/shared'
+export { type PlayerInfo, type AnyDataConnection, type ChatMessage } from '../../multiplayer/shared'
 
 export const MAX_PLAYERS = 4
-
-export interface ChatMessage { id: number; name: string; text: string; self: boolean }
 
 // Messages sent from a non-host client to the host
 export type ToHostMsg =

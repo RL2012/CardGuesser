@@ -1,6 +1,6 @@
 // ── Codenames types & network messages ────────────────────────────────────────
 
-export { ICE_SERVERS, type AnyDataConnection } from '../../multiplayer/shared'
+export { type AnyDataConnection, type ChatMessage } from '../../multiplayer/shared'
 
 export const MAX_PLAYERS_CN = 8
 
@@ -23,8 +23,6 @@ export interface CodenamesPlayer {
   team: Team
   isSpymaster: boolean
 }
-
-export interface ChatMessage { id: number; name: string; text: string; self: boolean }
 
 // ── Messages sent from a non-host client to the host ──────────────────────────
 

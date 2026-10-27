@@ -1,6 +1,6 @@
 // ── Charades types & network messages ─────────────────────────────────────────
 
-export { ICE_SERVERS, type AnyDataConnection } from '../../multiplayer/shared'
+export { type AnyDataConnection, type ChatMessage } from '../../multiplayer/shared'
 
 export const MIN_PLAYERS_CZ = 4
 export const MAX_PLAYERS_CZ = 10
@@ -14,8 +14,6 @@ export interface CharadesPlayer {
   name: string
   team: Team
 }
-
-export interface ChatMessage { id: number; name: string; text: string; self: boolean }
 
 export interface TurnCardResult {
   word: string
