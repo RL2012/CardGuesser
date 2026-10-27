@@ -160,7 +160,6 @@ Pushes to `main` automatically build and deploy to GitHub Pages via GitHub Actio
 
 - **`src/multiplayer/transport.ts`** — WebSocket relay transport (`LocalConnection`, `createLocalPeer`). Replaces PeerJS/WebRTC on localhost (Firefox compat — see below). Not used in production.
 - **`src/multiplayer/shared.ts`** — `ICE_SERVERS` (metered.ca TURN), `PlayerInfo`, `AnyDataConnection` union type.
-- `src/components/card-categories/LocalTransport.ts` — Re-exports from `../../multiplayer/transport` (kept for backward-compat imports in CardCategories).
 
 **PvP networking pattern** (star topology — used by both Card Categories and Codenames): the first player becomes host; others connect peer-to-peer to the host's peer ID. The host is authoritative and relays `ToClientMsg` to all clients. Non-hosts send `ToHostMsg` only to the host. On localhost, `createLocalPeer()` replaces PeerJS with a WebSocket relay (`scripts/relay-server.mjs`, started alongside Vite via `npm run dev`) because Firefox private mode isolates mDNS ICE candidates and partitions BroadcastChannel. Production uses real PeerJS with TURN relays.
 
@@ -200,5 +199,5 @@ Pushes to `main` automatically build and deploy to GitHub Pages via GitHub Actio
 **Shared utilities and types:**
 - `src/hooks/hooks.ts` — typed Redux hooks (`useAppDispatch`, `useAppSelector`)
 - `src/types/types.ts` — shared TypeScript types (`Card`, `CardSet`)
-- `src/utils/utils.ts` — shared utility functions (`getRandomCard`, `formatTime`, `randomCrop`, `preloadImages`)
+- `src/utils/utils.ts` — shared utility functions (`getRandomCard`, `formatTime`, `randomCrop`)
 - `src/services/leaderboard.ts` — localStorage leaderboard service (`getLeaderboard`, `addScore`; also exports `LeaderboardEntry` and `GameKey` types)

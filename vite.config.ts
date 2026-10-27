@@ -11,7 +11,7 @@ export default defineConfig({
       manifest: {
         name: 'Card Guesser',
         short_name: 'CardGuesser',
-        description: 'Eight Yu-Gi-Oh! card guessing, trivia, and multiplayer games.',
+        description: 'Nine Yu-Gi-Oh! card guessing, trivia, and multiplayer games.',
         start_url: '/CardGuesser/',
         scope: '/CardGuesser/',
         display: 'standalone',

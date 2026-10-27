@@ -16,10 +16,3 @@ export function formatTime(seconds: number): string {
 export function randomCrop(): { cropX: number; cropY: number } {
   return { cropX: Math.random(), cropY: Math.random() }
 }
-
-export function preloadImages(ids: number[]): void {
-  for (const id of ids) {
-    const img = new Image()
-    img.src = `/images/${id}.jpg`
-  }
-}

@@ -156,6 +156,7 @@ export function createLocalPeer(): LocalPeerInstance {
     ws.onopen = () => {
       dbg('ws', `connected to relay`)
       wsOpen = true
+      clearTimeout(wsTimeout)
       ws!.send(JSON.stringify({ type: 'register', peerId }))
       flushPending()
     }
@@ -234,7 +235,6 @@ export function createLocalPeer(): LocalPeerInstance {
   // Fire open on next tick so the caller has time to register the handler
   queueMicrotask(() => {
     dbg('peer', `firing onOpen → id=${shortId}`)
-    clearTimeout(wsTimeout)
     onOpen?.(peerId)
   })
 

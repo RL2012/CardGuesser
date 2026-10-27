@@ -6,7 +6,7 @@ import ScoreEntry from '../ScoreEntry'
 import { addScore } from '../../services/leaderboard'
 import { generateCategories, cardMatchesCategory } from './categoryUtils'
 import type { Category, GuessRecord } from './categoryUtils'
-import { createLocalPeer } from './LocalTransport'
+import { createLocalPeer } from '../../multiplayer/transport'
 import {
   ICE_SERVERS,
   MAX_PLAYERS,

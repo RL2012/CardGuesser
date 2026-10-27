@@ -130,10 +130,6 @@ export function getPropertyHints(secret: Card, guess: Card): PropertyHint[] {
   return hints
 }
 
-export function getColumnHeaders(secret: Card): string[] {
-  return getPropertyHints(secret, secret).map((h) => h.label)
-}
-
 export function isGuessCorrect(secret: Card, guess: Card): boolean {
   return secret.id === guess.id
 }
