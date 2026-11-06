@@ -2,6 +2,7 @@ import { useRef, useState, useCallback, useEffect, type ReactElement } from 'rea
 import type { DataConnection } from 'peerjs'
 import { useAppSelector } from '../../hooks/hooks'
 import { createPeer, type MultiplayerPeer } from '../../multiplayer/shared'
+import { shutDownLobby } from '../../multiplayer/lobbyShutdown'
 import {
   MAX_PLAYERS_CN,
   type AnyDataConnection,
@@ -90,6 +91,14 @@ export default function Codenames(): ReactElement {
   const chatEndRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => { cardsRef.current = cards }, [cards])
+
+  // Unmount (tab change, going offline): close the peer so others get their 'close' handling
+  useEffect(
+    () => () => {
+      shutDownLobby({ peerRef, hostConnRef, clientConnsRef, playersRef, inGameRef })
+    },
+    [],
+  )
 
   // ── Player helpers ─────────────────────────────────────────────────────────────
 

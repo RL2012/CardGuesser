@@ -6,6 +6,7 @@ import { addScore } from '../../services/leaderboard'
 import { generateCategories, cardMatchesCategory } from './categoryUtils'
 import type { Category, GuessRecord } from './categoryUtils'
 import { createPeer, type MultiplayerPeer } from '../../multiplayer/shared'
+import { shutDownLobby } from '../../multiplayer/lobbyShutdown'
 import {
   MAX_PLAYERS,
   type PlayerInfo,
@@ -116,6 +117,15 @@ export default function CardCategories() {
   useEffect(() => {
     cardsRef.current = cards
   }, [cards])
+
+  // Unmount (tab change, going offline): stop the turn timer and close the peer (null in solo)
+  useEffect(
+    () => () => {
+      isSoloRef.current = false
+      shutDownLobby({ peerRef, hostConnRef, clientConnsRef, playersRef, inGameRef, turnTimerRef })
+    },
+    [],
+  )
 
   // Re-render every 500 ms while a turn deadline is active so the countdown stays live
   useEffect(() => {
@@ -482,7 +492,7 @@ export default function CardCategories() {
             }
           : undefined
       broadcastGame({ type: 'round-draw' })
-      setTimeout(() => hostStartRound(capturedPrevRoundInfo), 2000)
+      setTimeout(() => { if (inGameRef.current) hostStartRound(capturedPrevRoundInfo) }, 2000)
       return
     }
 
@@ -492,6 +502,7 @@ export default function CardCategories() {
     if (isSoloRef.current && gameStateRef.current.correctGuesses.length === 3) {
       setSoloRoundWon(true)
       setTimeout(() => {
+        if (!isSoloRef.current) return
         setSoloRoundWon(false)
         setSoloScore((s) => s + 1)
         soloStartNewRound()
@@ -529,6 +540,7 @@ export default function CardCategories() {
     const isGameOver = isSoloRef.current ? curLives <= 0 : active.length <= 1
     const delay = isGameOver ? 1800 : 2200
     setTimeout(() => {
+      if (!inGameRef.current && !isSoloRef.current) return
       if (isGameOver) {
         broadcastGame({ type: 'game-over', winner: isSoloRef.current ? '' : (active[0] ?? ''), prevRoundInfo: capturedPrevRoundInfo })
       } else if (isSoloRef.current) {

@@ -14,7 +14,7 @@ Every push to `main` triggers a GitHub Actions deploy to GitHub Pages (`.github/
 - `npm test` (`node --test` over `tests/**/*.test.ts`, no test framework installed: Node 24 strips the types itself, so a file under test must import with explicit `.ts` extensions or have no imports)
 - `npm ci` (lock file is CI-compatible)
 
-The test suite is small (card-id filtering, the 16-column `cards.txt` parser and Trivia Blitz's highest ATK question) and has no coverage target. GitHub Actions runs it and lint before the build, so a failing test (including a bad `public/cards.txt` from YgoDomainBuilder's sync) blocks the deploy.
+The test suite is small (card-id filtering, the 16-column `cards.txt` parser, Trivia Blitz's highest ATK question, the relay peer's `destroy()` and `shutDownLobby`) and has no coverage target. GitHub Actions runs it and lint before the build, so a failing test (including a bad `public/cards.txt` from YgoDomainBuilder's sync) blocks the deploy.
 
 ## Commands
 
@@ -35,6 +35,7 @@ npm run fetch-cards  # Manual fallback: regenerate public/cards.txt from YGOProD
 - Game modes are tab-switched in `App.tsx`, each a self-contained component tree under `src/components/<mode>/`.
 - Multiplayer games (Card Categories, Codenames, Chameleon, Charades) share `src/multiplayer/` and a host-authoritative **star topology**: first player is host + authority, relays `ToClientMsg`; clients send `ToHostMsg` only to host.
 - Lobbies get their peer from `createPeer()` in `src/multiplayer/shared.ts` (typed `MultiplayerPeer`; relay on localhost, PeerJS elsewhere). Don't build a `Peer` in a component.
+- Each lobby shuts down on unmount: a mount-only effect calls `shutDownLobby` (`src/multiplayer/lobbyShutdown.ts`), which empties the refs, destroys the peer and clears `turnTimerRef`. Any delayed host step (`setTimeout`) must check `inGameRef` first (`isSoloRef` in Card Categories solo).
 - **Charades** (`src/components/charades/`): team game, min 4 players / 2 per team (Red vs Blue), 3 turns per team alternating. Each turn's describer rotates round-robin within their team; the host sends their card directly to only that one connection (`your-card`/`next-card`), never broadcast, so it stays private — teammates guess via real voice chat, not the app. Prep screen → 60s host-timed guessing round (Skip / Got It!, card name hidden from everyone but the describer) → turn-over reveal (that turn's cards + results shown to the room, also appended to a running sidebar **Card Log** for the whole game) → next turn, until all 6 turns are played.
 
 ## Invariants / rules

@@ -2,6 +2,7 @@ import { useRef, useState, useCallback, useEffect, type ReactElement } from 'rea
 import type { DataConnection } from 'peerjs'
 import { useAppSelector } from '../../hooks/hooks'
 import { createPeer, type MultiplayerPeer } from '../../multiplayer/shared'
+import { shutDownLobby } from '../../multiplayer/lobbyShutdown'
 import {
   MAX_PLAYERS_CH,
   MIN_PLAYERS_CH,
@@ -110,6 +111,14 @@ export default function Chameleon(): ReactElement {
 
   useEffect(() => { cardsRef.current = cards }, [cards])
 
+  // Unmount (tab change, going offline): close the peer so others get their 'close' handling
+  useEffect(
+    () => () => {
+      shutDownLobby({ peerRef, hostConnRef, clientConnsRef, playersRef, inGameRef })
+    },
+    [],
+  )
+
   function addChat(msg: Omit<ChatMessage, 'id'>) {
     setChatMessages((prev) => {
       const next = [...prev, { ...msg, id: chatIdSeq++ }]
@@ -156,7 +165,7 @@ export default function Chameleon(): ReactElement {
     setGameState(gs)
     broadcast({ type: 'game-started', totalRounds })
     setLobbyPhase('game')
-    setTimeout(() => hostStartRound(), 600)
+    setTimeout(() => { if (inGameRef.current) hostStartRound() }, 600)
   }
 
   function hostStartRound() {
@@ -234,7 +243,7 @@ export default function Chameleon(): ReactElement {
       setGameState(updated)
       setMyTurn(false)
       broadcastAndApply({ type: 'speaking-done', words })
-      setTimeout(() => hostStartVoting(), 1500)
+      setTimeout(() => { if (inGameRef.current) hostStartVoting() }, 1500)
       return
     }
 
@@ -323,6 +332,7 @@ export default function Chameleon(): ReactElement {
 
     if (gs.round >= gs.totalRounds) {
       setTimeout(() => {
+        if (!inGameRef.current) return
         const sorted = [...updatedPlayers].sort((a, b) => b.score - a.score)
         broadcastAndApply({ type: 'game-over', scores: sorted })
         const top = sorted[0]
@@ -331,7 +341,7 @@ export default function Chameleon(): ReactElement {
         }
       }, 2000)
     } else {
-      setTimeout(() => hostStartRound(), 2500)
+      setTimeout(() => { if (inGameRef.current) hostStartRound() }, 2500)
     }
   }
 

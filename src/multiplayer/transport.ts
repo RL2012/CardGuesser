@@ -269,6 +269,7 @@ export function createLocalPeer(): LocalPeerInstance {
     destroy() {
       dbg('peer', `destroy()`)
       clearTimeout(wsTimeout)
+      for (const conn of peers.values()) conn.close() // like PeerJS: tells the remote, fires local 'close'
       ws?.close()
       peers.clear()
     },

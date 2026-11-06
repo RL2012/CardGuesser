@@ -2,6 +2,7 @@ import { useRef, useState, useCallback, useEffect, type ReactElement } from 'rea
 import type { DataConnection } from 'peerjs'
 import { useAppSelector } from '../../hooks/hooks'
 import { createPeer, type MultiplayerPeer } from '../../multiplayer/shared'
+import { shutDownLobby } from '../../multiplayer/lobbyShutdown'
 import {
   MIN_PLAYERS_CZ,
   MAX_PLAYERS_CZ,
@@ -103,6 +104,14 @@ export default function Charades(): ReactElement {
   })
 
   useEffect(() => { cardsRef.current = cards }, [cards])
+
+  // Unmount (tab change, going offline): stop the turn timer and close the peer so others get their 'close' handling
+  useEffect(
+    () => () => {
+      shutDownLobby({ peerRef, hostConnRef, clientConnsRef, playersRef, inGameRef, turnTimerRef })
+    },
+    [],
+  )
 
   // Re-render every 500 ms while the guessing timer is running so the countdown stays live
   useEffect(() => {
@@ -230,7 +239,7 @@ export default function Charades(): ReactElement {
     inGameRef.current = true
     broadcast({ type: 'game-started', totalTurns })
     setLobbyPhase('game')
-    setTimeout(() => hostStartTurn(), 400)
+    setTimeout(() => { if (inGameRef.current) hostStartTurn() }, 400)
   }
 
   function hostStartTurn() {
