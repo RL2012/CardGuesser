@@ -1,19 +1,21 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { useAppDispatch, useAppSelector } from './hooks/hooks'
 import { fetchCards } from './store/cardsSlice'
-import CardGuesser from './components/card-guesser/CardGuesser'
-import HigherOrLower from './components/higher-or-lower/HigherOrLower'
-import CardCategories from './components/card-categories/CardCategories'
-import Codenames from './components/codenames/Codenames'
-import Connections from './components/connections/Connections'
-import Chameleon from './components/chameleon/Chameleon'
-import Charades from './components/charades/Charades'
-import CardWordle from './components/wordle/CardWordle'
-import TriviaBlitz from './components/trivia/TriviaBlitz'
+import GameLoadBoundary from './components/GameLoadBoundary'
 import Leaderboards from './components/Leaderboards'
 import Homepage from './components/Homepage'
 import './App.css'
+
+const CardGuesser = lazy(() => import('./components/card-guesser/CardGuesser'))
+const HigherOrLower = lazy(() => import('./components/higher-or-lower/HigherOrLower'))
+const CardCategories = lazy(() => import('./components/card-categories/CardCategories'))
+const Codenames = lazy(() => import('./components/codenames/Codenames'))
+const Connections = lazy(() => import('./components/connections/Connections'))
+const Chameleon = lazy(() => import('./components/chameleon/Chameleon'))
+const Charades = lazy(() => import('./components/charades/Charades'))
+const CardWordle = lazy(() => import('./components/wordle/CardWordle'))
+const TriviaBlitz = lazy(() => import('./components/trivia/TriviaBlitz'))
 
 type GameMode =
   | 'home'
@@ -203,17 +205,19 @@ export default function App() {
       )}
 
       {status === 'succeeded' && (
-        <>
-          {activeGame === 'card-guesser' && <CardGuesser />}
-          {activeGame === 'higher-or-lower' && <HigherOrLower />}
-          {isOnline && activeGame === 'card-categories' && <CardCategories />}
-          {isOnline && activeGame === 'codenames' && <Codenames />}
-          {activeGame === 'connections' && <Connections />}
-          {isOnline && activeGame === 'chameleon' && <Chameleon />}
-          {isOnline && activeGame === 'charades' && <Charades />}
-          {activeGame === 'wordle' && <CardWordle />}
-          {activeGame === 'trivia' && <TriviaBlitz />}
-        </>
+        <GameLoadBoundary key={activeGame}>
+          <Suspense fallback={<p className="status-message">Loading game…</p>}>
+            {activeGame === 'card-guesser' && <CardGuesser />}
+            {activeGame === 'higher-or-lower' && <HigherOrLower />}
+            {isOnline && activeGame === 'card-categories' && <CardCategories />}
+            {isOnline && activeGame === 'codenames' && <Codenames />}
+            {activeGame === 'connections' && <Connections />}
+            {isOnline && activeGame === 'chameleon' && <Chameleon />}
+            {isOnline && activeGame === 'charades' && <Charades />}
+            {activeGame === 'wordle' && <CardWordle />}
+            {activeGame === 'trivia' && <TriviaBlitz />}
+          </Suspense>
+        </GameLoadBoundary>
       )}
 
       {(offlineReady || needRefresh) && (
