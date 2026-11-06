@@ -55,3 +55,25 @@ test('public/cards.txt has no pre-release ids, repeated ids or repeated names on
     [{ id: 56651978, name: 'Elfnote Regina' }],
   )
 })
+
+// A pipe or newline in a value shifts every later column, so parseLine reads the wrong fields without
+// failing. Both writers strip them; this catches a file that got through anyway before it deploys.
+test('every public/cards.txt row has 16 columns and parseable sets JSON', () => {
+  const rows = readFileSync(new URL('../public/cards.txt', import.meta.url), 'utf8')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+  const bad = rows.filter((row) => {
+    const columns = row.split('|')
+    if (columns.length !== 16) return true
+    try {
+      return !Array.isArray(JSON.parse(columns[10]))
+    } catch {
+      return true
+    }
+  })
+  assert.deepEqual(
+    bad.map((row) => row.slice(0, 60)),
+    [],
+  )
+})

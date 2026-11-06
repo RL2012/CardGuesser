@@ -19,6 +19,10 @@ if (!res.ok) {
 const { data } = await res.json()
 console.log(`Got ${data.length} cards.`)
 
+// A pipe or newline in a value would shift every later column. YGOProDeck has served both (card
+// 77157846's archetype held a pipe), so drop them, as YgoDomainBuilder's export does.
+const stripDelimiters = (value) => String(value).replace(/[|\r\n]/g, '')
+
 // Format: id|name|frameType|type|attribute|atk|def|level|race|archetype|sets(JSON)|banTcg|views|viewsWeek|tcgDate|tcgplayerPrice
 const lines = data.map((c) => {
   const misc = c.misc_info?.[0]
@@ -47,7 +51,9 @@ const lines = data.map((c) => {
     misc?.viewsweek ?? 0,
     misc?.tcg_date ?? '',
     tcgplayerPrice,
-  ].join('|')
+  ]
+    .map(stripDelimiters)
+    .join('|')
 })
 
 writeFileSync(CARDS_TXT, lines.join('\n'), 'utf-8')
