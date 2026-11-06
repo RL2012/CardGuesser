@@ -5,8 +5,8 @@ import { fileURLToPath } from 'url'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const CARDS_TXT = join(__dirname, '..', 'public', 'cards.txt')
 
-// public/cards.txt is normally written by YgoDomainBuilder's daily card sync (its
-// Helpers/CardGuesserExport.cs), which commits and pushes it. That copy takes each printing's
+// public/cards.txt is normally written by YgoDomainBuilder's manual admin
+// "Update All Card Info" sync (its Helpers/CardGuesserExport.cs), which commits and pushes it. That copy takes each printing's
 // TCGplayer price and edition from tcgcsv.com, because YGOProDeck dropped `tcgplayer_data` on
 // 2026-09-03 (the parameter now 400s). This script is the manual fallback: YGOProDeck's own set
 // prices and no editions. Both writers must produce the same 16 columns.
@@ -63,7 +63,7 @@ console.log('Saved public/cards.txt')
 // When the API starts returning the correct value, these hardcodes in
 // src/utils/dataFixes.ts can be removed.
 const DATA_FIX_CHECKS = [
-  { id: 34022970, name: 'Ext Ryzeal', field: 'banlist_info.ban_tcg', correctValue: 'Limited',
+  { id: 95454996, name: 'Maliss <Q> White Binder', field: 'banlist_info.ban_tcg', correctValue: 'Forbidden',
     actual: (c) => c.banlist_info?.ban_tcg ?? null },
 ]
 for (const check of DATA_FIX_CHECKS) {

@@ -117,7 +117,7 @@ Card data is pre-fetched into `public/cards.txt` (pipe-delimited, 16 columns: `i
 
 ## Deployment
 
-Pushes to `main` automatically build and deploy to GitHub Pages via GitHub Actions (`.github/workflows/deploy.yml`). The workflow runs on Node 24 and does `npm ci`, `npm run lint`, `npm test`, then `npm run build`. If lint or a test fails, nothing deploys and the live site keeps the previous build. That matters for card data: `tests/cardIds.test.ts` reads `public/cards.txt`, so a bad file pushed by YgoDomainBuilder's sync fails the run instead of going live. The Vite build generates `manifest.webmanifest`, `sw.js`, the precache manifest, and the install icons in `dist/`.
+Pushes to `main` automatically build and deploy to GitHub Pages via GitHub Actions (`.github/workflows/deploy.yml`). The workflow runs on Node 24 and does `npm ci`, `npm run lint`, `npm test`, then `npm run build`. If lint or a test fails, nothing deploys and the live site keeps the previous build. That matters for card data: `tests/cardIds.test.ts` reads `public/cards.txt`, so a malformed file from YgoDomainBuilder's sync fails the run instead of going live: too few cards, pre-release or repeated ids, repeated names, a wrong column count or unparseable sets JSON. Wrong values with the right shape, such as a bad price, still deploy. The Vite build generates `manifest.webmanifest`, `sw.js`, the precache manifest, and the install icons in `dist/`.
 
 ---
 
@@ -161,6 +161,7 @@ Pushes to `main` automatically build and deploy to GitHub Pages via GitHub Actio
 **Shared multiplayer layer** (`src/multiplayer/`): Extracted from Card Categories so all four multiplayer games (Card Categories, Codenames, Chameleon, Charades) share it.
 
 - **`src/multiplayer/transport.ts`** — WebSocket relay transport (`LocalConnection`, `createLocalPeer`). Replaces PeerJS/WebRTC on localhost (Firefox compat — see below). Not used in production. `destroy()` closes every open connection first, so remote peers get `conn-close` as they would from PeerJS.
+- **`src/multiplayer/errorMessage.ts`** — `errorMessage(err: unknown)`, the lobbies' typed reader for connection `error` events.
 - **`src/multiplayer/lobbyShutdown.ts`** — `shutDownLobby(refs)`, called from a mount-only effect in each lobby. It sets `inGameRef` false, empties `playersRef`, the client connection map and `hostConnRef`, nulls `peerRef`, destroys the peer, then clears the turn timer. It has no imports so `node --test` can load it.
 - **`src/multiplayer/shared.ts`** — `ICE_SERVERS` (metered.ca TURN), `PlayerInfo`, `ChatMessage`, the `AnyDataConnection` union type, the `MultiplayerPeer` interface and `createPeer()`. `createPeer()` returns the relay peer on localhost and a PeerJS `Peer` with `ICE_SERVERS` elsewhere; every lobby calls it instead of building a peer.
 

@@ -7,6 +7,7 @@ import { generateCategories, cardMatchesCategory } from './categoryUtils'
 import type { Category, GuessRecord } from './categoryUtils'
 import { createPeer, type MultiplayerPeer } from '../../multiplayer/shared'
 import { shutDownLobby } from '../../multiplayer/lobbyShutdown'
+import { errorMessage } from '../../multiplayer/errorMessage'
 import {
   MAX_PLAYERS,
   type PlayerInfo,
@@ -711,8 +712,7 @@ export default function CardCategories() {
       }
     })
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    conn.on('error', (err: any) => setPeerError(err.message))
+    conn.on('error', (err: unknown) => setPeerError(errorMessage(err)))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const wireHostConn = useCallback((conn: AnyDataConnection) => {
@@ -771,10 +771,9 @@ export default function CardCategories() {
       resetToLobby()
       setPeerError('The host disconnected.')
     })
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    conn.on('error', (err: any) => {
+    conn.on('error', (err: unknown) => {
       clearTimeout(connTimeout)
-      setPeerError(err.message)
+      setPeerError(errorMessage(err))
     })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -801,7 +800,7 @@ export default function CardCategories() {
       wireClientConn(conn)
       if (!inGameRef.current) setLobbyPhase('room')
     })
-    peer.on('error', (err: Error) => setPeerError(err.message))
+    peer.on('error', (err: Error) => setPeerError(errorMessage(err)))
   }
 
   const handleJoin = (e: React.FormEvent) => {

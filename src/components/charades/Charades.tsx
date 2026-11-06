@@ -3,6 +3,7 @@ import type { DataConnection } from 'peerjs'
 import { useAppSelector } from '../../hooks/hooks'
 import { createPeer, type MultiplayerPeer } from '../../multiplayer/shared'
 import { shutDownLobby } from '../../multiplayer/lobbyShutdown'
+import { errorMessage } from '../../multiplayer/errorMessage'
 import {
   MIN_PLAYERS_CZ,
   MAX_PLAYERS_CZ,
@@ -537,8 +538,7 @@ export default function Charades(): ReactElement {
         }
       }
     })
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    conn.on('error', (err: any) => setPeerError(err.message))
+    conn.on('error', (err: unknown) => setPeerError(errorMessage(err)))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const wireHostConn = useCallback((conn: AnyDataConnection) => {
@@ -580,10 +580,9 @@ export default function Charades(): ReactElement {
       resetToSetup()
       setPeerError('The host disconnected.')
     })
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    conn.on('error', (err: any) => {
+    conn.on('error', (err: unknown) => {
       clearTimeout(connTimeout)
-      setPeerError(err.message)
+      setPeerError(errorMessage(err))
     })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -734,7 +733,7 @@ export default function Charades(): ReactElement {
         wireClientConn(conn)
         if (!inGameRef.current) setLobbyPhase('room')
       })
-      peer.on('error', (err: Error) => setPeerError(err.message))
+      peer.on('error', (err: Error) => setPeerError(errorMessage(err)))
       setLobbyPhase('lobby')
     }
     return (

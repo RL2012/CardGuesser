@@ -14,7 +14,7 @@ Every push to `main` triggers a GitHub Actions deploy to GitHub Pages (`.github/
 - `npm test` (`node --test` over `tests/**/*.test.ts`, no test framework installed: Node 24 strips the types itself, so a file under test must import with explicit `.ts` extensions or have no imports)
 - `npm ci` (lock file is CI-compatible)
 
-The test suite is small (card-id filtering, the 16-column `cards.txt` parser and the published file's column count, Trivia Blitz's highest ATK question, the relay peer's `destroy()` and `shutDownLobby`, no static import from `main.tsx` reaching PeerJS or a game mode) and has no coverage target. GitHub Actions runs it and lint before the build, so a failing test (including a bad `public/cards.txt` from YgoDomainBuilder's sync) blocks the deploy.
+The test suite is small (card-id filtering, the 16-column `cards.txt` parser, checks on the published `public/cards.txt`, Trivia Blitz's highest ATK question, the relay peer's connect timeout and `destroy()`, `shutDownLobby`, `errorMessage`, no static import from `main.tsx` reaching PeerJS or a game mode) and has no coverage target. GitHub Actions runs it and lint before the build, so a failing test blocks the deploy. The `cards.txt` checks catch structural damage from YgoDomainBuilder's sync: under 10,000 cards, pre-release or repeated ids, repeated names, a row without 16 columns or parseable sets JSON. A wrong price, ban status or stat passes them.
 
 ## Commands
 
@@ -62,7 +62,7 @@ Any change to architecture, game modes, commands, card-data format, or conventio
 
 ## Global CLAUDE.md propagation
 
-After significant changes (new/removed game modes, dependencies, commands, card data, deployment), update `### CardGuesser` in the workspace-root `CLAUDE.md`.
+After significant changes (new/removed game modes, dependencies, commands, card data, deployment), check the one-line CardGuesser entry under `## Projects` in the workspace-root `CLAUDE.md` and update it if it no longer holds. The detail stays in this file.
 
 ## Looking at the running app
 

@@ -12,8 +12,7 @@ export interface CardDataFix {
 }
 
 export const CARD_DATA_FIXES: Record<number, CardDataFix> = {
-  // Ext Ryzeal/White binder — API returns no ban status; correct value is "Limited"
-  34022970: { banTcg: 'Limited' },
+  // Maliss <Q> White Binder: the API returns no ban status; correct value is "Forbidden"
   95454996: { banTcg: 'Forbidden' },
 }
 
