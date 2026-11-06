@@ -600,6 +600,10 @@ export default function Chameleon(): ReactElement {
         hostConnRef.current = null
         isHostRef.current = true
         setIsHost(true)
+        // handleJoin emptied the list, so put the host back before anyone joins this room.
+        const hostPlayer: ChameleonPlayer = { peerId: myPeerIdRef.current, name: myNameRef.current, score: 0 }
+        playersRef.current = [hostPlayer]
+        setPlayers([hostPlayer])
         setLobbyPhase('lobby')
         setPeerError(rejectedReason)
         return
